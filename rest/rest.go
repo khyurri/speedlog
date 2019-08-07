@@ -12,11 +12,6 @@ type App struct {
 	Logger   *log.Logger
 }
 
-type Resp struct {
-	Status string
-	Body   interface{}
-}
-
 type AppHandlerFunc func(http.ResponseWriter, *http.Request, *engine.Engine)
 
 func New(eng *engine.Engine) *App {

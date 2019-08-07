@@ -6,8 +6,9 @@ import (
 	"github.com/khyurri/speedlog/engine"
 	"github.com/khyurri/speedlog/engine/events"
 	"github.com/khyurri/speedlog/engine/mongo"
-	"github.com/khyurri/speedlog/engine/rest"
+	"github.com/khyurri/speedlog/engine/projects"
 	"github.com/khyurri/speedlog/engine/users"
+	"github.com/khyurri/speedlog/rest"
 	"log"
 	"net/http"
 	"os"
@@ -43,6 +44,7 @@ func main() {
 
 		events.ExportRoutes(r, app)
 		users.ExportRoutes(r, app)
+		projects.ExportRoutes(r, app)
 
 		srv := &http.Server{
 			Handler:      r,

@@ -7,7 +7,7 @@ import (
 	"github.com/globalsign/mgo/bson"
 	"github.com/gorilla/mux"
 	"github.com/khyurri/speedlog/engine"
-	"github.com/khyurri/speedlog/engine/rest"
+	"github.com/khyurri/speedlog/rest"
 	"net/http"
 )
 
@@ -42,7 +42,7 @@ func AuthenticateHttp(w http.ResponseWriter, r *http.Request, eng *engine.Engine
 	}
 	// GENERATE TOKEN //
 
-	_, tokenString, err := engine.SigningKey.Encode(
+	_, tokenString, err := rest.SigningKey.Encode(
 		jwt.MapClaims{"source": "rest", "issuer": u.Login})
 
 	if err != nil {

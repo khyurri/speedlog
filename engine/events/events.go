@@ -8,7 +8,7 @@ import (
 	"github.com/gorilla/mux"
 	"github.com/khyurri/speedlog/engine"
 	"github.com/khyurri/speedlog/engine/projects"
-	"github.com/khyurri/speedlog/engine/rest"
+	"github.com/khyurri/speedlog/rest"
 	"net/http"
 	"time"
 )
@@ -53,7 +53,7 @@ func ExportRoutes(router *mux.Router, app *rest.App) {
 		Queries("metric_time_from", "{metricTimeFrom}").
 		Queries("metric_time_to", "{metricTimeTo}").
 		Queries("group_by", "{groupBy}")
-	private.Use(engine.JWTMiddleware)
+	private.Use(rest.JWTMiddleware)
 }
 
 //////////////////////////////////////////////////////////////////////
@@ -65,12 +65,17 @@ func ExportRoutes(router *mux.Router, app *rest.App) {
 // PUT /pravoved.ru/event/
 func SaveEventHttp(w http.ResponseWriter, r *http.Request, eng *engine.Engine) {
 	var err error
+
+	response := &rest.Resp{}
+	defer response.Render(w)
+
 	event := &Event{}
 	vars := mux.Vars(r)
 	decoder := json.NewDecoder(r.Body)
 	err = decoder.Decode(&event)
 	if err != nil {
 		eng.Logger.Fatal(err)
+		response.Status = rest.StatusIntErr
 		return
 	}
 
@@ -88,10 +93,19 @@ func SaveEventHttp(w http.ResponseWriter, r *http.Request, eng *engine.Engine) {
 	cast.execute(event)
 
 	err = SaveEvent(event, eng)
+	if err == nil {
+		saved := struct {
+			Saved bool `json:"saved"`
+		}{true}
+		response.Status = rest.StatusOk
+		response.JsonBody, err = json.Marshal(saved)
+	}
 	if err != nil {
 		eng.Logger.Fatal(err)
+		response.Status = rest.StatusIntErr
 		return
 	}
+
 }
 
 // GET /pravoved.ru/events/?metric_time_from=2019-08-02T00:00:00&metric_time_to=2019-08-03T00:00:00&group_by=minutes&metric_name=backend_response
