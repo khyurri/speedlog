@@ -111,6 +111,9 @@ func SaveEventHttp(w http.ResponseWriter, r *http.Request, eng *engine.Engine) {
 // GET /pravoved.ru/events/?metric_time_from=2019-08-02T00:00:00&metric_time_to=2019-08-03T00:00:00&group_by=minutes&metric_name=backend_response
 // 	group_by : minutes, hours, days, weeks, months
 func GetEventsHttp(w http.ResponseWriter, r *http.Request, eng *engine.Engine) {
+	response := &rest.Resp{}
+	defer response.Render(w)
+
 	engineRequest := &Event{}
 	var err error
 	vars := mux.Vars(r)
@@ -136,30 +139,20 @@ func GetEventsHttp(w http.ResponseWriter, r *http.Request, eng *engine.Engine) {
 	eng.Logger.Printf("[debug] request matched")
 	if cast.err != nil {
 		// TODO: return error
-		panic(cast.err)
+		eng.Logger.Fatal(cast.err)
 	} else {
 		events, err := GetEvents(engineRequest, eng)
-		fmt.Println(events)
-		fmt.Println(err)
+		if err != nil {
+			eng.Logger.Fatal(err)
+			return
+		}
+		response.JsonBody, err = json.Marshal(events)
+		if err != nil {
+			eng.Logger.Fatal(err)
+			return
+		}
+		response.Status = rest.StatusOk
 	}
-}
-
-func GetEvents(req *Event, eng *engine.Engine) (events []Event, err error) {
-	dbEngine := eng.DBEngine
-	events = make([]Event, 0)
-	// TODO: check req can be sent as request
-	eng.Logger.Println(req.MetricTimeFrom)
-	eng.Logger.Println(req.MetricTimeTo)
-	err = dbEngine.Collection(collection).
-		Find(bson.M{
-			"project_id": req.ProjectId,
-			"metric_time": bson.M{
-				"$gte": req.MetricTimeFrom,
-				"$lt":  req.MetricTimeTo,
-			},
-			"metric_name": req.MetricName,
-		}).All(&events)
-	return
 }
 
 func SaveEvent(event *Event, eng *engine.Engine) (err error) {

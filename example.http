@@ -1,7 +1,14 @@
 PUT 127.0.0.1:8012/private/project/
 Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3N1ZXIiOiJhZG1pbiIsInNvdXJjZSI6InJlc3QifQ.b1mWEPDovS5SReQs2NuhnJLXNc7o4H3A89f3xi83RNc
 
-{"title": "pravoved.ru"}
+{"title": "s1.pravoved.ru"}
+
+###
+PUT 127.0.0.1:8012/private/project/
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3N1ZXIiOiJhZG1pbiIsInNvdXJjZSI6InJlc3QifQ.b1mWEPDovS5SReQs2NuhnJLXNc7o4H3A89f3xi83RNc
+
+{"title": ""}
+
 
 ###
 

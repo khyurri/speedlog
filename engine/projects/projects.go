@@ -1,8 +1,7 @@
 package projects
 
 import (
-	"errors"
-	"fmt"
+	"encoding/json"
 	"github.com/globalsign/mgo/bson"
 	"github.com/gorilla/mux"
 	"github.com/khyurri/speedlog/engine"
@@ -16,7 +15,11 @@ const (
 
 type Project struct {
 	ID    bson.ObjectId `bson:"_id,omitempty"`
-	Title string
+	Title string        `bson:"title"`
+}
+
+type RegisterProjectRequest struct {
+	Title string `json:"title"`
 }
 
 func ExportRoutes(router *mux.Router, app *rest.App) {
@@ -26,8 +29,41 @@ func ExportRoutes(router *mux.Router, app *rest.App) {
 	private.Use(rest.JWTMiddleware)
 }
 
-func RegisterProjectHttp(http.ResponseWriter, *http.Request, *engine.Engine) {
-	fmt.Println("HELLO!")
+func RegisterProjectHttp(w http.ResponseWriter, r *http.Request, eng *engine.Engine) {
+	var err error
+
+	response := &rest.Resp{}
+	defer response.Render(w)
+
+	p := &RegisterProjectRequest{}
+	decoder := json.NewDecoder(r.Body)
+	err = decoder.Decode(p)
+	if err != nil {
+		response.Status = rest.StatusErr
+		eng.Logger.Fatal(err)
+		return
+	}
+	if len(p.Title) == 0 {
+		response.Status = rest.StatusErr
+		return
+	}
+	_, err = ProjectExists(p.Title, eng)
+	// TODO: simplify this block
+	if err != nil {
+		if err.Error() == "not found" {
+			registered := RegisterProject(p.Title, eng)
+			if !registered {
+				response.Status = rest.StatusIntErr
+			} else {
+				response.Status = rest.StatusOk
+			}
+		} else {
+			response.Status = rest.StatusIntErr
+		}
+	} else {
+		response.Status = rest.StatusExists
+	}
+
 }
 
 func ProjectExists(title string, eng *engine.Engine) (projectId bson.ObjectId, err error) {
@@ -35,14 +71,19 @@ func ProjectExists(title string, eng *engine.Engine) (projectId bson.ObjectId, e
 	dbEngine := eng.DBEngine
 	err = dbEngine.Collection(collection).Find(bson.M{"title": title}).One(&t)
 	if err != nil {
-		if err.Error() == "not found" {
-			return projectId, errors.New(fmt.Sprintf("Project %s does not exists", title))
-		} else {
-			// TODO: just log it
-			panic(err)
-		}
+		return
 	} else {
 		projectId = t.ID
 	}
-	return t.ID, err
+	return
+}
+
+func RegisterProject(title string, eng *engine.Engine) bool {
+	t := &Project{Title: title}
+	col := eng.DBEngine.Collection("project")
+	err := col.Insert(t)
+	if err != nil {
+		eng.Logger.Fatal(err)
+	}
+	return true
 }
