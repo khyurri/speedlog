@@ -3,9 +3,17 @@ package events
 import (
 	"github.com/globalsign/mgo/bson"
 	"github.com/khyurri/speedlog/engine"
+	"time"
 )
 
-func GetEvents(req *Event, eng *engine.Engine) (events []Event, err error) {
+type Filter struct {
+	MetricName     string        `bson:"metric_name"`
+	ProjectId      bson.ObjectId `bson:"project_id"`
+	MetricTimeFrom time.Time     `bson:"metric_time_from,omitempty"`
+	MetricTimeTo   time.Time     `bson:"metric_time_to,omitempty"`
+}
+
+func (req *Filter) FilterEvents(eng *engine.Engine) (events []Event, err error) {
 	dbEngine := eng.DBEngine
 	events = make([]Event, 0)
 	// TODO: check req can be sent as request

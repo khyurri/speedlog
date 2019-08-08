@@ -1,3 +1,25 @@
+PUT http://127.0.0.1:8012/pravoved.ru/event/
+
+{"metricName": "backend_response", "durationMs": 301}
+
+<> 2019-08-08T070242.200.txt
+
+###
+
+GET http://127.0.0.1:8012/private/pravoved.ru/events/?metric_time_from=2019-08-02T00:00:00&metric_time_to=2019-08-05T00:00:00&group_by=minutes&metric_name=backend_response
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3N1ZXIiOiJhZG1pbiIsInNvdXJjZSI6InJlc3QifQ.b1mWEPDovS5SReQs2NuhnJLXNc7o4H3A89f3xi83RNc
+
+<> 2019-08-08T010941.200.txt
+
+###
+
+GET http://127.0.0.1:8012/private/pravoved.ru/events/?metric_time_from=2019-08-02T00:00:00&metric_time_to=2019-08-05T00:00:00&group_by=minutes&metric_name=backend_response
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3N1ZXIiOiJhZG1pbiIsInNvdXJjZSI6InJlc3QifQ.b1mWEPDovS5SReQs2NuhnJLXNc7o4H3A89f3xi83RNc
+
+<> 2019-08-08T010811.200.txt
+
+###
+
 GET http://127.0.0.1:8012/private/pravoved.ru/events/?metric_time_from=2019-08-02T00:00:00&metric_time_to=2019-08-05T00:00:00&group_by=minutes&metric_name=backend_response
 Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3N1ZXIiOiJhZG1pbiIsInNvdXJjZSI6InJlc3QifQ.b1mWEPDovS5SReQs2NuhnJLXNc7o4H3A89f3xi83RNc
 
@@ -327,26 +349,6 @@ PUT http://127.0.0.1:8012/pravoved.ru/event/
 PUT http://127.0.0.1:8012/pravoved.ru/event/
 
 {"metricName": "backend_response", "durationMs": 300}
-
-###
-
-PUT http://127.0.0.1:8012/pravoved.ru/event/
-
-{"metricName": "backend_response", "durationMs": 300}
-
-###
-
-PUT http://127.0.0.1:8012/pravoved.ru/event/
-
-{"metricName": "backend_response", "durationMs": 300}
-
-###
-
-PUT http://127.0.0.1:8012/pravoved.ru/event/
-
-{"metricName": "backend_response", "durationMs": 300}
-
-<> 2019-08-07T115356.200.txt
 
 ###
 

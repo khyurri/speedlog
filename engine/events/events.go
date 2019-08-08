@@ -69,28 +69,12 @@ func SaveEventHttp(w http.ResponseWriter, r *http.Request, eng *engine.Engine) {
 	response := &rest.Resp{}
 	defer response.Render(w)
 
-	event := &Event{}
-	vars := mux.Vars(r)
-	decoder := json.NewDecoder(r.Body)
-	err = decoder.Decode(&event)
+	event, err := MapSaveRequestToEvent(r, eng)
 	if err != nil {
 		eng.Logger.Fatal(err)
 		response.Status = rest.StatusIntErr
 		return
 	}
-
-	cast := &CheckAndCast{
-		[]string{
-			vars["project"],
-			"", // event.MetricTime = time.Now()
-		},
-		[]CACFunc{
-			CACProject,
-			CACMetricTimeNow,
-		},
-		err, eng,
-	}
-	cast.execute(event)
 
 	err = SaveEvent(event, eng)
 	if err == nil {
@@ -140,19 +124,21 @@ func GetEventsHttp(w http.ResponseWriter, r *http.Request, eng *engine.Engine) {
 	if cast.err != nil {
 		// TODO: return error
 		eng.Logger.Fatal(cast.err)
-	} else {
-		events, err := GetEvents(engineRequest, eng)
-		if err != nil {
-			eng.Logger.Fatal(err)
-			return
-		}
-		response.JsonBody, err = json.Marshal(events)
-		if err != nil {
-			eng.Logger.Fatal(err)
-			return
-		}
-		response.Status = rest.StatusOk
+		return
 	}
+	filter := MapEventToFilter(engineRequest)
+	events, err := filter.FilterEvents(eng)
+	if err != nil {
+		eng.Logger.Fatal(err)
+		return
+	}
+	response.JsonBody, err = json.Marshal(events)
+	if err != nil {
+		eng.Logger.Fatal(err)
+		return
+	}
+	response.Status = rest.StatusOk
+
 }
 
 func SaveEvent(event *Event, eng *engine.Engine) (err error) {
