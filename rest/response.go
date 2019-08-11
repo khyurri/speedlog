@@ -46,3 +46,9 @@ func (r *Resp) Render(w http.ResponseWriter) {
 		return
 	}
 }
+
+func InvalidRequestParams(message string) interface{} {
+	return struct {
+		Message string `json:"message"`
+	}{message}
+}

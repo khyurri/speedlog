@@ -3,6 +3,7 @@ package users
 import (
 	"encoding/json"
 	"errors"
+	"fmt"
 	"github.com/dgrijalva/jwt-go"
 	"github.com/globalsign/mgo/bson"
 	"github.com/gorilla/mux"
@@ -25,31 +26,54 @@ func ExportRoutes(router *mux.Router, app *rest.App) {
 		Methods("POST")
 }
 
+func invalidAuthRequest(response *rest.Resp) {
+	authErrorMsg := "invalid login or password"
+	response.Status = rest.StatusErr
+	response.JsonBody, _ = json.Marshal(
+		rest.InvalidRequestParams(authErrorMsg))
+}
+
+func tokenResp(token string, response *rest.Resp) {
+	response.Status = rest.StatusOk
+	response.JsonBody, _ = json.Marshal(struct {
+		Token string `json:"token"`
+	}{token},
+	)
+}
+
 func AuthenticateHttp(w http.ResponseWriter, r *http.Request, eng *engine.Engine) {
-	eng.Logger.Println("Trying to log in")
+	response := &rest.Resp{}
+	defer response.Render(w)
+
+	if r.Body == nil {
+		_r, _ := json.Marshal(r)
+		fmt.Println(_r)
+		eng.Logger.Printf("[info] request body is nil. Request: %s", _r)
+		invalidAuthRequest(response)
+		return
+	}
 	decoder := json.NewDecoder(r.Body)
 	u := &User{}
 	err := decoder.Decode(&u)
 	if err != nil {
-		eng.Logger.Fatal(err)
+		invalidAuthRequest(response)
 		return
 	}
 	err = Authenticate(u.Login, u.Password, eng)
 	if err != nil {
-		// TODO: make error response
-		eng.Logger.Println(err)
+		invalidAuthRequest(response)
 		return
 	}
+
 	// GENERATE TOKEN //
 
 	_, tokenString, err := rest.SigningKey.Encode(
 		jwt.MapClaims{"source": "rest", "issuer": u.Login})
 
 	if err != nil {
-		eng.Logger.Fatal(err)
+		invalidAuthRequest(response)
 	}
-
-	eng.Logger.Println(tokenString)
+	tokenResp(tokenString, response)
 }
 
 func AddUser(login string, password string, eng *engine.Engine) (err error) {
@@ -76,13 +100,5 @@ func Authenticate(login string, password string, eng *engine.Engine) (err error)
 			return
 		}
 	}
-	return
-}
-
-func AuthorizeMiddleware(w http.ResponseWriter, r *http.Request) {
-
-}
-
-func Authorize(token string) (result bool) {
 	return
 }
