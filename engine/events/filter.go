@@ -4,6 +4,7 @@ import (
 	"github.com/globalsign/mgo/bson"
 	"github.com/khyurri/speedlog/engine"
 	"github.com/montanaflynn/stats"
+	"sort"
 	"time"
 )
 
@@ -25,6 +26,8 @@ type FilteredEvent struct {
 	EventCount       int           `bson:event_count,omitempty"`
 	durationsMs      []float64
 }
+
+type FilteredEvents []*FilteredEvent
 
 func (req *Filter) FilterEvents(eng *engine.Engine) (events []Event, err error) {
 	dbEngine := eng.DBEngine
@@ -50,44 +53,42 @@ func average(items []float64) float64 {
 	return acc / float64(len(items))
 }
 
-func GroupBy(group string, events []Event, eng *engine.Engine) (result []*FilteredEvent, err error) {
+func GroupBy(group string, events []Event, eng *engine.Engine) (result FilteredEvents, err error) {
 	result = mapEvent(events)
+	ordered(result)
 	return
 }
 
-func mapEvent(event []Event) (result []*FilteredEvent) {
-	// event should be ordered
+func mapEvent(event []Event) (result FilteredEvents) {
+
 	if len(event) == 0 {
 		return
 	}
-	year := event[0].MetricTime.Year()
-	month := event[0].MetricTime.Month()
-	day := event[0].MetricTime.Day()
-	fe := &FilteredEvent{
-		MetricName: event[0].MetricName,
-		MetricTime: time.Date(year, month, day, 0, 0, 0, 0, time.UTC),
-		ProjectId:  event[0].ProjectId,
-	}
-	// TODO: simplify
+
+	m := map[time.Time]*FilteredEvent{}
+
 	for _, e := range event {
-		if year != e.MetricTime.Year() &&
-			month != e.MetricTime.Month() &&
-			day != e.MetricTime.Day() {
-			// TODO: bug here
-			result = append(result, fe)
-			collapse(fe)
 
-			year := e.MetricTime.Year()
-			month := e.MetricTime.Month()
-			day := e.MetricTime.Day()
+		key := time.Date(
+			e.MetricTime.Year(),
+			e.MetricTime.Month(),
+			e.MetricTime.Day(), 0, 0, 0, 0, time.UTC)
 
-			fe = &FilteredEvent{
+		if nil == m[key] {
+			m[key] = &FilteredEvent{
 				MetricName: e.MetricName,
-				MetricTime: time.Date(year, month, day, 0, 0, 0, 0, time.UTC),
+				MetricTime: key,
 				ProjectId:  e.ProjectId,
 			}
 		}
-		fe.durationsMs = append(fe.durationsMs, e.DurationMs)
+
+		m[key].durationsMs = append(m[key].durationsMs, e.DurationMs)
+	}
+	if len(m) > 0 {
+		for _, e := range m {
+			collapse(e)
+			result = append(result, e)
+		}
 	}
 	return
 }
@@ -97,4 +98,21 @@ func collapse(src *FilteredEvent) {
 	src.MinDurationMs, _ = stats.Min(src.durationsMs)
 	src.MedianDurationMs, _ = stats.Median(src.durationsMs)
 	src.MiddleDurationMs = average(src.durationsMs)
+	src.EventCount = len(src.durationsMs)
+}
+
+func (o FilteredEvents) Len() int {
+	return len(o)
+}
+
+func (o FilteredEvents) Swap(i, j int) {
+	o[i], o[j] = o[j], o[i]
+}
+
+func (o FilteredEvents) Less(i, j int) bool {
+	return o[i].MetricTime.Before(o[j].MetricTime)
+}
+
+func ordered(srcs FilteredEvents) {
+	sort.Sort(srcs)
 }
