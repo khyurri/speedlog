@@ -33,6 +33,14 @@ func invalidAuthRequest(response *rest.Resp) {
 		rest.InvalidRequestParams(authErrorMsg))
 }
 
+func tokenResp(token string, response *rest.Resp) {
+	response.Status = rest.StatusOk
+	response.JsonBody, _ = json.Marshal(struct {
+		Token string `json:"token"`
+	}{token},
+	)
+}
+
 func AuthenticateHttp(w http.ResponseWriter, r *http.Request, eng *engine.Engine) {
 	response := &rest.Resp{}
 	defer response.Render(w)
@@ -65,8 +73,7 @@ func AuthenticateHttp(w http.ResponseWriter, r *http.Request, eng *engine.Engine
 	if err != nil {
 		invalidAuthRequest(response)
 	}
-
-	eng.Logger.Println(tokenString)
+	tokenResp(tokenString, response)
 }
 
 func AddUser(login string, password string, eng *engine.Engine) (err error) {
@@ -93,13 +100,5 @@ func Authenticate(login string, password string, eng *engine.Engine) (err error)
 			return
 		}
 	}
-	return
-}
-
-func AuthorizeMiddleware(w http.ResponseWriter, r *http.Request) {
-
-}
-
-func Authorize(token string) (result bool) {
 	return
 }

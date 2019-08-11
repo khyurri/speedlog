@@ -1,0 +1,14 @@
+POST http://127.0.0.1:8012/login/
+
+{"login": "admin", "password": "letmein"}
+
+<> 2019-08-11T110145.200.txt
+
+###
+
+POST http://127.0.0.1:8012/login/
+
+{"login": "admin", "password": "letmein"}
+
+###
+
