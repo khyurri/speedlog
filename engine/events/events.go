@@ -93,7 +93,7 @@ func SaveEventHttp(w http.ResponseWriter, r *http.Request, eng *engine.Engine) {
 }
 
 // GET /pravoved.ru/events/?metric_time_from=2019-08-02T00:00:00&metric_time_to=2019-08-03T00:00:00&group_by=minutes&metric_name=backend_response
-// 	group_by : minutes, hours, days, weeks, months
+// 	group_by : minutes, hours, days
 func GetEventsHttp(w http.ResponseWriter, r *http.Request, eng *engine.Engine) {
 	response := &rest.Resp{}
 	defer response.Render(w)

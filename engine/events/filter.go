@@ -1,6 +1,8 @@
 package events
 
 import (
+	"errors"
+	"fmt"
 	"github.com/globalsign/mgo/bson"
 	"github.com/khyurri/speedlog/engine"
 	"github.com/montanaflynn/stats"
@@ -29,6 +31,8 @@ type FilteredEvent struct {
 
 type FilteredEvents []*FilteredEvent
 
+type keyFunc func(eventTime time.Time) time.Time
+
 func (req *Filter) FilterEvents(eng *engine.Engine) (events []Event, err error) {
 	dbEngine := eng.DBEngine
 	events = make([]Event, 0)
@@ -54,12 +58,45 @@ func average(items []float64) float64 {
 }
 
 func GroupBy(group string, events []Event, eng *engine.Engine) (result FilteredEvents, err error) {
-	result = mapEvent(events)
+	m := map[string]keyFunc{
+		"minutes": groupByMinutes,
+		"hours":   groupByHours,
+		"days":    groupByDays,
+	}
+	if nil == m[group] {
+		return result, errors.New(fmt.Sprintf("unsupported group key %s", group))
+	}
+	result = mapEvent(events, m[group])
 	ordered(result)
 	return
 }
 
-func mapEvent(event []Event) (result FilteredEvents) {
+func groupByMinutes(eventTime time.Time) time.Time {
+	return time.Date(
+		eventTime.Year(),
+		eventTime.Month(),
+		eventTime.Day(),
+		eventTime.Hour(),
+		eventTime.Minute(), 0, 0, time.UTC)
+}
+
+func groupByHours(eventTime time.Time) time.Time {
+	return time.Date(
+		eventTime.Year(),
+		eventTime.Month(),
+		eventTime.Day(),
+		eventTime.Hour(),
+		0, 0, 0, time.UTC)
+}
+
+func groupByDays(eventTime time.Time) time.Time {
+	return time.Date(
+		eventTime.Year(),
+		eventTime.Month(),
+		eventTime.Day(), 0, 0, 0, 0, time.UTC)
+}
+
+func mapEvent(event []Event, keyFunc keyFunc) (result FilteredEvents) {
 
 	if len(event) == 0 {
 		return
@@ -69,11 +106,7 @@ func mapEvent(event []Event) (result FilteredEvents) {
 
 	for _, e := range event {
 
-		key := time.Date(
-			e.MetricTime.Year(),
-			e.MetricTime.Month(),
-			e.MetricTime.Day(), 0, 0, 0, 0, time.UTC)
-
+		key := keyFunc(e.MetricTime)
 		if nil == m[key] {
 			m[key] = &FilteredEvent{
 				MetricName: e.MetricName,
