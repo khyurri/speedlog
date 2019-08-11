@@ -31,7 +31,7 @@ type Event struct {
 	MetricName     string        `bson:"metric_name"`
 	MetricTime     time.Time     `bson:"metric_time,omitempty"`
 	ProjectId      bson.ObjectId `bson:"project_id"`
-	DurationMs     int           `bson:"duration_ms,omitempty"`
+	DurationMs     float64       `bson:"duration_ms,omitempty"`
 	MetricTimeFrom time.Time     `bson:"metric_time_from,omitempty"`
 	MetricTimeTo   time.Time     `bson:"metric_time_to,omitempty"`
 	GroupBy        int           `bson:"group_by,omitempty"`
@@ -101,7 +101,7 @@ func GetEventsHttp(w http.ResponseWriter, r *http.Request, eng *engine.Engine) {
 	engineRequest := &Event{}
 	var err error
 	vars := mux.Vars(r)
-
+	// TODO: Simplify, create map function
 	cast := &CheckAndCast{
 		[]string{
 			vars["metricTimeFrom"],
@@ -127,16 +127,24 @@ func GetEventsHttp(w http.ResponseWriter, r *http.Request, eng *engine.Engine) {
 		return
 	}
 	filter := MapEventToFilter(engineRequest)
+
+	// TODO: simplify
 	events, err := filter.FilterEvents(eng)
 	if err != nil {
 		eng.Logger.Fatal(err)
 		return
 	}
-	response.JsonBody, err = json.Marshal(events)
+	groupedEvents, err := GroupBy(vars["groupBy"], events, eng)
 	if err != nil {
 		eng.Logger.Fatal(err)
 		return
 	}
+	response.JsonBody, err = json.Marshal(groupedEvents)
+	if err != nil {
+		eng.Logger.Fatal(err)
+		return
+	}
+
 	response.Status = rest.StatusOk
 
 }
