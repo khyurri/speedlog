@@ -1,7 +1,7 @@
 package main
 
 import (
-	"flag"
+	"github.com/alexflint/go-arg"
 	"github.com/gorilla/mux"
 	"github.com/khyurri/speedlog/engine"
 	"github.com/khyurri/speedlog/engine/events"
@@ -15,29 +15,17 @@ import (
 	"time"
 )
 
-func main() {
-	//////////////////////////////////////////////////////
+type Config struct {
+	Mode     string `arg:"-m" help:"Available modes: runserver, adduser"`
+	Mongo    string `arg:"-d" help:"Mongodb url. Default 127.0.0.1:27017"`
+	Login    string `arg:"-l" help:"Mode adduser. Login for new user "`
+	Password string `arg:"-p" help:"Mode adduser. Password for new user"`
+	JWTKey   string `arg:"-j" help:"JWT secret key."`
+}
 
-	var mode = flag.String("mode", "runserver", "modes: runserver, adduser")
-	var login = flag.String("login", "", "login for new user")
-	var password = flag.String("password", "", "password for new user")
+func RunApp(config *Config, eng *engine.Engine) {
 
-	flag.Parse()
-
-	//////////////////////////////////////////////////////
-
-	logger := log.New(os.Stdout, "speedlog ", log.LstdFlags|log.Lshortfile)
-	dbEngine, err := mongo.New("speedlog", "127.0.0.1:27017", logger)
-	defer dbEngine.Close()
-
-	if err != nil {
-		logger.Fatalf("failed to initialize mongo: %v", err)
-		return
-	}
-
-	eng := engine.New(dbEngine, logger)
-
-	switch *mode {
+	switch config.Mode {
 	case "runserver":
 		app := rest.New(eng)
 		r := mux.NewRouter()
@@ -54,10 +42,42 @@ func main() {
 		}
 		log.Fatal(srv.ListenAndServe())
 	case "adduser":
-		err = users.AddUser(*login, *password, eng)
+		err := users.AddUser(config.Login, config.Password, eng)
 		if err != nil {
 			log.Fatal(err)
 		}
 	}
+}
+
+func main() {
+
+	config := &Config{}
+
+	////////////////////////////////////////
+	//
+	// DEFAULTS
+	config.Mode = "runserver"
+	config.Mongo = "127.0.0.1:27017"
+	//
+	////////////////////////////////////////
+
+	arg.MustParse(config)
+	logger := log.New(os.Stdout, "speedlog ", log.LstdFlags|log.Lshortfile)
+	if len(config.JWTKey) == 0 {
+		logger.Panic("missing jwtkey")
+		return
+	}
+
+	dbEngine, err := mongo.New("speedlog", config.Mongo, logger)
+
+	defer dbEngine.Close()
+
+	if err != nil {
+		logger.Fatalf("failed to initialize mongo: %v", err)
+		return
+	}
+
+	eng := engine.New(dbEngine, logger, config.JWTKey)
+	RunApp(config, eng)
 
 }

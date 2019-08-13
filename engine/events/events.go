@@ -53,7 +53,7 @@ func ExportRoutes(router *mux.Router, app *rest.App) {
 		Queries("metric_time_from", "{metricTimeFrom}").
 		Queries("metric_time_to", "{metricTimeTo}").
 		Queries("group_by", "{groupBy}")
-	private.Use(rest.JWTMiddleware)
+	private.Use(app.JWTMiddleware)
 }
 
 //////////////////////////////////////////////////////////////////////

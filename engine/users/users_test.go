@@ -11,10 +11,12 @@ import (
 	"testing"
 )
 
+var JWTTestKey = "test_key"
+
 func TestAuthenticateHttp(t *testing.T) {
 	logger := log.New(os.Stdout, "speedlog ", log.LstdFlags|log.Lshortfile)
 	dbEngine, _ := mongo.New("speedlog", "127.0.0.1:27017", logger)
-	eng := engine.New(dbEngine, logger)
+	eng := engine.New(dbEngine, logger, JWTTestKey)
 	errMsg := "{\"message\":\"invalid login or password\"}"
 
 	req, _ := http.NewRequest("POST", "/login/", nil)
