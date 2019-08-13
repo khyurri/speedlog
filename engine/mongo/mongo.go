@@ -33,3 +33,8 @@ func (engine *Engine) Close() {
 func (engine *Engine) Collection(collection string) *mgo.Collection {
 	return engine.Session.DB(engine.DB).C(collection)
 }
+
+// run only for testing
+func (engine *Engine) DropDatabase() error {
+	return engine.Session.DB(engine.DB).DropDatabase()
+}

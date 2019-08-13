@@ -26,7 +26,7 @@ func ExportRoutes(router *mux.Router, app *rest.App) {
 	private := router.PathPrefix("/private/").Subrouter()
 	private.HandleFunc("/project/", app.MongoEngine(RegisterProjectHttp)).
 		Methods("PUT")
-	private.Use(rest.JWTMiddleware)
+	private.Use(app.JWTMiddleware)
 }
 
 func RegisterProjectHttp(w http.ResponseWriter, r *http.Request, eng *engine.Engine) {
