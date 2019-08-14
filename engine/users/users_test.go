@@ -7,7 +7,6 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/suite"
 	"net/http"
-	"net/http/httptest"
 	"testing"
 )
 
@@ -37,20 +36,17 @@ func (suite *UsersTestSuit) SetupTest() {
 
 }
 
-func (suite *UsersTestSuit) makeRequest(req *http.Request) (result string) {
-	rr := httptest.NewRecorder()
-	handler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+func (suite *UsersTestSuit) getHandler() http.HandlerFunc {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		AuthenticateHttp(w, r, suite.Engine)
 	})
-	handler.ServeHTTP(rr, req)
-	return rr.Body.String()
 }
 
 func (suite *UsersTestSuit) TestAuthenticateHttp() {
 	// test invalid creds
 	errMsg := "{\"message\":\"invalid login or password\"}"
 	req, _ := http.NewRequest("POST", "/login/", nil)
-	res := suite.makeRequest(req)
+	res := suite.MakeRequest(req, suite.getHandler())
 	assert.Equal(suite.T(), res, errMsg)
 
 	// test valid creds
@@ -59,7 +55,7 @@ func (suite *UsersTestSuit) TestAuthenticateHttp() {
 		jsonStr, _ := json.Marshal(creds)
 		req, _ := http.NewRequest("POST", "/login/", bytes.NewBuffer(jsonStr))
 		req.Header.Set("Content-Type", "application/json")
-		res := suite.makeRequest(req)
+		res := suite.MakeRequest(req, suite.getHandler())
 		suite.T().Log(res)
 		assert.Contains(suite.T(), res, "token")
 	}
