@@ -37,6 +37,11 @@ type Event struct {
 	GroupBy        int           `bson:"group_by,omitempty"`
 }
 
+type SaveEventReq struct {
+	MetricName string  `json:"metric_name"`
+	DurationMs float64 `json:"duration_ms,omitempty"`
+}
+
 // Check and cast function type
 type CACFunc func(string, *Event, *engine.Engine) error
 
@@ -71,7 +76,8 @@ func SaveEventHttp(w http.ResponseWriter, r *http.Request, eng *engine.Engine) {
 
 	event, err := MapSaveRequestToEvent(r, eng)
 	if err != nil {
-		eng.Logger.Fatal(err)
+		// TODO: make more readable error, please
+		eng.Logger.Println(err)
 		response.Status = rest.StatusIntErr
 		return
 	}
@@ -201,6 +207,7 @@ func CACMetricName(value string, fe *Event, eng *engine.Engine) (err error) {
 }
 
 func CACProject(value string, fe *Event, eng *engine.Engine) (err error) {
+	eng.Logger.Printf("[debug] looking for project %s\n", value)
 	fe.ProjectId, err = projects.ProjectExists(value, eng)
 	return
 }
