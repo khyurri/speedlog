@@ -40,7 +40,7 @@ func (suite *UsersTestSuit) TestAuthenticateHttp() {
 	// test invalid creds
 	errMsg := "{\"message\":\"invalid login or password\"}"
 	req, _ := http.NewRequest("POST", "/login/", nil)
-	res := suite.MakeRequest(req, suite.LoginHandler())
+	_, res := suite.MakeRequest(req, suite.LoginHandler())
 	assert.Equal(suite.T(), res, errMsg)
 
 	// test valid creds
@@ -49,7 +49,7 @@ func (suite *UsersTestSuit) TestAuthenticateHttp() {
 		jsonStr, _ := json.Marshal(creds)
 		req, _ := http.NewRequest("POST", "/login/", bytes.NewBuffer(jsonStr))
 		req.Header.Set("Content-Type", "application/json")
-		res := suite.MakeRequest(req, suite.LoginHandler())
+		_, res := suite.MakeRequest(req, suite.LoginHandler())
 		suite.T().Log(res)
 		assert.Contains(suite.T(), res, "token")
 	}
