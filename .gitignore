@@ -1,2 +1,4 @@
 .idea
 speedlog.iml
+docker-compose.yml
+example.http
