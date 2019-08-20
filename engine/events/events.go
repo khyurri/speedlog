@@ -28,13 +28,13 @@ const (
 
 // Mongo event document
 type Event struct {
-	MetricName     string        `bson:"metric_name"`
-	MetricTime     time.Time     `bson:"metric_time,omitempty"`
-	ProjectId      bson.ObjectId `bson:"project_id"`
-	DurationMs     float64       `bson:"duration_ms,omitempty"`
-	MetricTimeFrom time.Time     `bson:"metric_time_from,omitempty"`
-	MetricTimeTo   time.Time     `bson:"metric_time_to,omitempty"`
-	GroupBy        int           `bson:"group_by,omitempty"`
+	MetricName     string        `bson:"metric_name" json:"metric_name"`
+	MetricTime     time.Time     `bson:"metric_time,omitempty" json:"metric_time"`
+	ProjectId      bson.ObjectId `bson:"project_id" json:"project_id"`
+	DurationMs     float64       `bson:"duration_ms,omitempty" json:"duration_ms,omitempty"`
+	MetricTimeFrom time.Time     `bson:"metric_time_from,omitempty" json:"metric_time_from,omitempty"`
+	MetricTimeTo   time.Time     `bson:"metric_time_to,omitempty" json:"metric_time_to,omitempty"`
+	GroupBy        int           `bson:"group_by,omitempty" json:"group_by,omitempty"`
 }
 
 type SaveEventReq struct {
@@ -107,6 +107,7 @@ func GetEventsHttp(w http.ResponseWriter, r *http.Request, eng *engine.Engine) {
 	engineRequest := &Event{}
 	var err error
 	vars := mux.Vars(r)
+	eng.Logger.Println(vars)
 	// TODO: Simplify, create map function
 	cast := &CheckAndCast{
 		[]string{
@@ -202,6 +203,7 @@ func CACGroupBy(value string, fe *Event, eng *engine.Engine) (err error) {
 }
 
 func CACMetricName(value string, fe *Event, eng *engine.Engine) (err error) {
+	eng.Logger.Printf("[debug] save metric %s\n", value)
 	fe.MetricName = value
 	return
 }

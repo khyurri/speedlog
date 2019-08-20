@@ -3,10 +3,13 @@ package events
 import (
 	"bytes"
 	"encoding/json"
+	"github.com/gorilla/mux"
+	"github.com/khyurri/speedlog/rest"
 	"github.com/khyurri/speedlog/test"
 	"github.com/stretchr/testify/suite"
 	"math/rand"
 	"net/http"
+	"net/http/httptest"
 	"testing"
 	"time"
 )
@@ -61,16 +64,17 @@ func (suite *EventsTestSuit) TestStoreEvents() {
 	if err != nil {
 		suite.T().Log(err)
 	}
-
+	router := mux.NewRouter()
+	app := rest.New(suite.Engine)
+	ExportRoutes(router, app)
 	for _, event := range suite.TestEvents {
 		jsonStr, _ := json.Marshal(event)
-		req, _ := http.NewRequest("PUT", "/"+TestProject+"/event/", bytes.NewBuffer(jsonStr))
-		req.Header.Set("Content-Type", "application/json")
-		token.AuthHeader(req)
-		code, res := suite.MakeRequest(req, suite.getStoreEventHandler())
-		suite.T().Log(code)
-		suite.T().Log(res)
-
+		r, _ := http.NewRequest("PUT", "/"+TestProject+"/event/", bytes.NewBuffer(jsonStr))
+		r.Header.Set("Content-Type", "application/json")
+		token.AuthHeader(r)
+		w := httptest.NewRecorder()
+		router.ServeHTTP(w, r)
+		suite.Equal(200, w.Code)
 	}
 }
 

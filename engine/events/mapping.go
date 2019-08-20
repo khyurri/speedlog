@@ -22,6 +22,7 @@ func MapSaveRequestToEvent(r *http.Request, eng *engine.Engine) (event *Event, e
 	vars := mux.Vars(r)
 	decoder := json.NewDecoder(r.Body)
 	err = decoder.Decode(&event)
+	eng.Logger.Println(event.MetricName)
 	if err != nil {
 		return
 	}
