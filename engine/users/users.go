@@ -66,7 +66,9 @@ func AuthenticateHttp(w http.ResponseWriter, r *http.Request, eng *engine.Engine
 	}
 
 	// GENERATE TOKEN //
-
+	eng.Logger.Println("----------------------------")
+	eng.Logger.Println(u.Login)
+	eng.Logger.Println("----------------------------")
 	_, tokenString, err := eng.SigningKey.Encode(
 		jwt.MapClaims{"source": "rest", "issuer": u.Login})
 
