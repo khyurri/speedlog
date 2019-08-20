@@ -36,7 +36,7 @@ func RunApp(config *Config, eng *engine.Engine) {
 
 		srv := &http.Server{
 			Handler:      r,
-			Addr:         "127.0.0.1:8012",
+			Addr:         ":8012",
 			WriteTimeout: 15 * time.Second,
 			ReadTimeout:  15 * time.Second,
 		}
