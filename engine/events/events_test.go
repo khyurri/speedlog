@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"encoding/json"
 	"github.com/gorilla/mux"
-	"github.com/khyurri/speedlog/rest"
 	"github.com/khyurri/speedlog/test"
 	"github.com/stretchr/testify/suite"
 	"math/rand"

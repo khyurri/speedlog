@@ -1,4 +1,4 @@
-package events
+package engine
 
 import (
 	"encoding/json"
@@ -6,15 +6,11 @@ import (
 	"fmt"
 	"github.com/globalsign/mgo/bson"
 	"github.com/gorilla/mux"
-	"github.com/khyurri/speedlog/engine"
-	"github.com/khyurri/speedlog/engine/projects"
-	"github.com/khyurri/speedlog/rest"
 	"net/http"
 	"time"
 )
 
 const (
-	collection = "events"
 	timeLayout = "2006-01-02T15:04:05"
 )
 
@@ -43,23 +39,7 @@ type SaveEventReq struct {
 }
 
 // CACFunc — check and cast function type
-type CACFunc func(string, *Event, *engine.Engine) error
-
-// ROUTES
-
-func ExportRoutes(router *mux.Router, app *rest.App) {
-	router.HandleFunc("/{project}/event/", app.MongoEngine(SaveEventHttp)).
-		Methods("PUT")
-
-	private := router.PathPrefix("/private/").Subrouter()
-	private.HandleFunc("/{project}/events/", app.MongoEngine(GetEventsHttp)).
-		Methods("GET").
-		Queries("metric_name", "{metricName}").
-		Queries("metric_time_from", "{metricTimeFrom}").
-		Queries("metric_time_to", "{metricTimeTo}").
-		Queries("group_by", "{groupBy}")
-	private.Use(app.JWTMiddleware)
-}
+type CACFunc func(string, *Event, *Env) error
 
 //////////////////////////////////////////////////////////////////////
 //
@@ -68,31 +48,31 @@ func ExportRoutes(router *mux.Router, app *rest.App) {
 //////////////////////////////////////////////////////////////////////
 
 // SaveEventHttp PUT /pravoved.ru/event/
-func SaveEventHttp(w http.ResponseWriter, r *http.Request, eng *engine.Engine) {
+func (env *Env) SaveEventHttp(w http.ResponseWriter, r *http.Request) {
 	var err error
 
-	response := &rest.Resp{}
+	response := &Resp{}
 	defer response.Render(w)
 
-	event, err := MapSaveRequestToEvent(r, eng)
+	event, err := MapSaveRequestToEvent(r, env)
 	if err != nil {
 		// TODO: make more readable error, please
-		eng.Logger.Println(err)
-		response.Status = rest.StatusIntErr
+		env.Logger.Println(err)
+		response.Status = StatusIntErr
 		return
 	}
 
-	err = SaveEvent(event, eng)
+	err = env.DBEngine.SaveEvent(event)
 	if err == nil {
 		saved := struct {
 			Saved bool `json:"saved"`
 		}{true}
-		response.Status = rest.StatusOk
+		response.Status = StatusOk
 		response.JsonBody, err = json.Marshal(saved)
 	}
 	if err != nil {
-		eng.Logger.Fatal(err)
-		response.Status = rest.StatusIntErr
+		env.Logger.Fatal(err)
+		response.Status = StatusIntErr
 		return
 	}
 
@@ -100,14 +80,14 @@ func SaveEventHttp(w http.ResponseWriter, r *http.Request, eng *engine.Engine) {
 
 // GetEventsHttp GET /pravoved.ru/events/?metric_time_from=2019-08-02T00:00:00&metric_time_to=2019-08-03T00:00:00&group_by=minutes&metric_name=backend_response
 // 	group_by : minutes, hours, days
-func GetEventsHttp(w http.ResponseWriter, r *http.Request, eng *engine.Engine) {
-	response := &rest.Resp{}
+func (env *Env) GetEventsHttp(w http.ResponseWriter, r *http.Request) {
+	response := &Resp{}
 	defer response.Render(w)
 
 	engineRequest := &Event{}
 	var err error
 	vars := mux.Vars(r)
-	eng.Logger.Println(vars)
+	env.Logger.Println(vars)
 	// TODO: Simplify, create map function
 	cast := &CheckAndCast{
 		[]string{
@@ -124,42 +104,36 @@ func GetEventsHttp(w http.ResponseWriter, r *http.Request, eng *engine.Engine) {
 			CACMetricName,
 			CACProject,
 		},
-		err, eng,
+		err, env,
 	}
 	cast.execute(engineRequest)
-	eng.Logger.Printf("[debug] request matched")
+	env.Logger.Printf("[debug] request matched")
 	if cast.err != nil {
 		// TODO: return error
-		eng.Logger.Fatal(cast.err)
+		env.Logger.Fatal(cast.err)
 		return
 	}
 	filter := MapEventToFilter(engineRequest)
 
 	// TODO: simplify
-	events, err := filter.FilterEvents(eng)
+	events, err := env.DBEngine.FilterEvents(filter)
 	if err != nil {
-		eng.Logger.Fatal(err)
+		env.Logger.Fatal(err)
 		return
 	}
-	groupedEvents, err := GroupBy(vars["groupBy"], events, eng)
+	groupedEvents, err := env.DBEngine.GroupBy(vars["groupBy"], events)
 	if err != nil {
-		eng.Logger.Fatal(err)
+		env.Logger.Fatal(err)
 		return
 	}
 	response.JsonBody, err = json.Marshal(groupedEvents)
 	if err != nil {
-		eng.Logger.Fatal(err)
+		env.Logger.Fatal(err)
 		return
 	}
 
-	response.Status = rest.StatusOk
+	response.Status = StatusOk
 
-}
-
-func SaveEvent(event *Event, eng *engine.Engine) (err error) {
-	dbEngine := eng.DBEngine
-	err = dbEngine.Collection(collection).Insert(event)
-	return
 }
 
 ///////////////////////////////////////////////////////////////
@@ -168,22 +142,22 @@ func SaveEvent(event *Event, eng *engine.Engine) (err error) {
 //
 ///////////////////////////////////////////////////////////////
 
-func CACTimeFrom(value string, fe *Event, eng *engine.Engine) (err error) {
+func CACTimeFrom(value string, fe *Event, env *Env) (err error) {
 	fe.MetricTimeFrom, err = time.Parse(timeLayout, value)
 	return
 }
 
-func CACTimeTo(value string, fe *Event, eng *engine.Engine) (err error) {
+func CACTimeTo(value string, fe *Event, env *Env) (err error) {
 	fe.MetricTimeTo, err = time.Parse(timeLayout, value)
 	return
 }
 
-func CACMetricTimeNow(value string, fe *Event, eng *engine.Engine) (err error) {
+func CACMetricTimeNow(value string, fe *Event, env *Env) (err error) {
 	fe.MetricTime = time.Now()
 	return
 }
 
-func CACGroupBy(value string, fe *Event, eng *engine.Engine) (err error) {
+func CACGroupBy(value string, fe *Event, env *Env) (err error) {
 	switch value {
 	case "minutes":
 		fe.GroupBy = GroupByMins
@@ -202,15 +176,15 @@ func CACGroupBy(value string, fe *Event, eng *engine.Engine) (err error) {
 	return
 }
 
-func CACMetricName(value string, fe *Event, eng *engine.Engine) (err error) {
-	eng.Logger.Printf("[debug] save metric %s\n", value)
+func CACMetricName(value string, fe *Event, env *Env) (err error) {
+	env.Logger.Printf("[debug] save metric %s\n", value)
 	fe.MetricName = value
 	return
 }
 
-func CACProject(value string, fe *Event, eng *engine.Engine) (err error) {
-	eng.Logger.Printf("[debug] looking for project %s\n", value)
-	fe.ProjectId, err = projects.ProjectExists(value, eng)
+func CACProject(value string, fe *Event, env *Env) (err error) {
+	env.Logger.Printf("[debug] looking for project %s\n", value)
+	fe.ProjectId, err = env.DBEngine.ProjectExists(value)
 	return
 }
 
@@ -228,7 +202,7 @@ type CheckAndCast struct {
 	values []string
 	fns    []CACFunc
 	err    error
-	eng    *engine.Engine
+	eng    *Env
 }
 
 func (rp *CheckAndCast) execute(target *Event) {
@@ -241,4 +215,40 @@ func (rp *CheckAndCast) execute(target *Event) {
 		}
 		rp.err = fn(rp.values[i], target, rp.eng)
 	}
+}
+
+func MapEventToFilter(e *Event) interface{} {
+	return struct {
+		MetricName     string
+		ProjectId      bson.ObjectId
+		MetricTimeFrom time.Time
+		MetricTimeTo   time.Time
+	}{
+		e.MetricName,
+		e.ProjectId,
+		e.MetricTimeFrom,
+		e.MetricTimeTo,
+	}
+}
+
+func MapSaveRequestToEvent(r *http.Request, env *Env) (event *Event, err error) {
+	event = &Event{}
+	vars := mux.Vars(r)
+	decoder := json.NewDecoder(r.Body)
+	err = decoder.Decode(&event)
+	env.Logger.Println(event.MetricName)
+	if err != nil {
+		return
+	}
+	// TODO: make CACFunc closure
+	fns := []CACFunc{CACProject, CACMetricTimeNow}
+	str := []string{vars["project"], ""}
+	for i, fn := range fns {
+		if err != nil {
+			return
+		}
+		k := str[i]
+		err = fn(k, event, env)
+	}
+	return
 }

@@ -2,39 +2,48 @@ package mongo
 
 import (
 	"github.com/globalsign/mgo"
-	"log"
+	"github.com/globalsign/mgo/bson"
 )
 
-type Engine struct {
-	Session *mgo.Session
-	DB      string
-	logger  *log.Logger
+const (
+	userCollection    = "user"
+	projectCollection = "project"
+	eventCollection   = "event"
+)
+
+type DataStore interface {
+	AddUser(login string, password string) (err error)
+	Authenticate(login string, password string) (err error)
+	ProjectExists(title string) (projectId bson.ObjectId, err error)
+	RegisterProject(title string) bool
+	FilterEvents(req *Filter) (events []interface{}, err error)
+	GroupBy(group string, events []interface{}) (result FilteredEvents, err error)
+	SaveEvent(event interface{}) (err error)
 }
 
-func New(db string, url string, logger *log.Logger) (engine *Engine, err error) {
-	engine = &Engine{DB: db, logger: logger}
+type Mongo struct {
+	Session *mgo.Session
+	DbName  string
+}
+
+func New(db string, url string) (engine *Mongo, err error) {
+	engine = &Mongo{DbName: db}
 	engine.Session, err = mgo.Dial(url)
 	return engine, err
 }
 
-func (engine *Engine) Clone() *Engine {
-	session := engine.Session.Clone()
-	return &Engine{
-		Session: session,
-		DB:      engine.DB,
-		logger:  engine.logger,
+func (mg *Mongo) Clone() *mgo.Session {
+	return mg.Session.Clone()
+}
+
+func (mg *Mongo) Collection(collection string, sess *mgo.Session) *mgo.Collection {
+	if sess == nil {
+		sess = mg.Session
 	}
+	return sess.DB(mg.DbName).C(collection)
 }
 
-func (engine *Engine) Close() {
-	engine.Session.Close()
-}
-
-func (engine *Engine) Collection(collection string) *mgo.Collection {
-	return engine.Session.DB(engine.DB).C(collection)
-}
-
-// run only for testing
-func (engine *Engine) DropDatabase() error {
-	return engine.Session.DB(engine.DB).DropDatabase()
+// DropDatabase - !run only for testing!
+func (mg *Mongo) DropDatabase() error {
+	return mg.Session.DB(mg.DbName).DropDatabase()
 }

@@ -6,8 +6,6 @@ import (
 	"fmt"
 	"github.com/khyurri/speedlog/engine"
 	"github.com/khyurri/speedlog/engine/mongo"
-	"github.com/khyurri/speedlog/engine/projects"
-	"github.com/khyurri/speedlog/engine/users"
 	"log"
 	"net/http"
 	"net/http/httptest"
@@ -20,8 +18,8 @@ type SpeedLogTest struct {
 	JWTTestKey string
 	Mongo      string
 	Logger     *log.Logger
-	DBEngine   *mongo.Engine
-	Engine     *engine.Engine
+	DBEngine   *mongo.Mongo
+	Engine     *engine.Env
 }
 
 type JWTToken struct {
