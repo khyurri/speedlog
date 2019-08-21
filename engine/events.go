@@ -22,17 +22,6 @@ const (
 	GroupByMonths = iota
 )
 
-// Event — mongo event document
-type Event struct {
-	MetricName     string        `bson:"metric_name" json:"metric_name"`
-	MetricTime     time.Time     `bson:"metric_time,omitempty" json:"metric_time"`
-	ProjectId      bson.ObjectId `bson:"project_id" json:"project_id"`
-	DurationMs     float64       `bson:"duration_ms,omitempty" json:"duration_ms,omitempty"`
-	MetricTimeFrom time.Time     `bson:"metric_time_from,omitempty" json:"metric_time_from,omitempty"`
-	MetricTimeTo   time.Time     `bson:"metric_time_to,omitempty" json:"metric_time_to,omitempty"`
-	GroupBy        int           `bson:"group_by,omitempty" json:"group_by,omitempty"`
-}
-
 type SaveEventReq struct {
 	MetricName string  `json:"metric_name"`
 	DurationMs float64 `json:"duration_ms,omitempty"`

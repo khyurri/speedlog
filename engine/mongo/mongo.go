@@ -17,7 +17,7 @@ type DataStore interface {
 	ProjectExists(title string) (projectId bson.ObjectId, err error)
 	RegisterProject(title string) bool
 	FilterEvents(req *Filter) (events []interface{}, err error)
-	GroupBy(group string, events []interface{}) (result FilteredEvents, err error)
+	GroupBy(group string, events []interface{}) (result []*AggregatedEvent, err error)
 	SaveEvent(event interface{}) (err error)
 }
 
