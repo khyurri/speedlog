@@ -7,7 +7,7 @@ import (
 )
 
 type App struct {
-	eng *engine.Engine
+	Eng *engine.Engine
 }
 
 type AppHandlerFunc func(http.ResponseWriter, *http.Request, *engine.Engine)
@@ -18,11 +18,12 @@ func New(eng *engine.Engine) *App {
 
 func (app *App) MongoEngine(next AppHandlerFunc) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		dbEngine := app.eng.DBEngine.Clone()
+		dbEngine := app.Eng.DBEngine.Clone()
 		defer dbEngine.Close()
 		eng := &engine.Engine{
-			DBEngine: dbEngine,
-			Logger:   app.eng.Logger,
+			DBEngine:   dbEngine,
+			Logger:     app.Eng.Logger,
+			SigningKey: app.Eng.SigningKey,
 		}
 		next(w, r, eng)
 	}
@@ -31,7 +32,7 @@ func (app *App) MongoEngine(next AppHandlerFunc) http.HandlerFunc {
 func (app *App) JWTMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		t := jwtauth.TokenFromHeader(r)
-		_, err := app.eng.SigningKey.Decode(t)
+		_, err := app.Eng.SigningKey.Decode(t)
 		if err != nil {
 			response := &Resp{}
 			response.Status = StatusForbidden

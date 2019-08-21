@@ -27,6 +27,12 @@ func RunApp(config *Config, eng *engine.Engine) {
 
 	switch config.Mode {
 	case "runserver":
+
+		if len(config.JWTKey) == 0 {
+			eng.Logger.Panic("missing jwtkey")
+			return
+		}
+
 		app := rest.New(eng)
 		r := mux.NewRouter()
 
@@ -63,10 +69,6 @@ func main() {
 
 	arg.MustParse(config)
 	logger := log.New(os.Stdout, "speedlog ", log.LstdFlags|log.Lshortfile)
-	if len(config.JWTKey) == 0 {
-		logger.Panic("missing jwtkey")
-		return
-	}
 
 	dbEngine, err := mongo.New("speedlog", config.Mongo, logger)
 
