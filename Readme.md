@@ -2,6 +2,37 @@
 
 REST only interface. No UI.
 
+# Quick start
+
+Run `speedlog` using docker-compose.yml:
+
+```yaml
+version: '3'
+services:
+  app:
+    image: khyurri/speedlog:0.1.0
+    command: "/opt/speedlog/main --jwtkey=*** --mongo=mongo:27017"
+    depends_on:
+      - mongo
+    ports:
+      - "8012:8012"
+  mongo:
+    image: mongo:3.6
+    ports:
+      - "27017:27017"
+``` 
+
+## Create user
+
+```bash
+docker exec -it speedlog_app_1 /opt/speedlog/main --mode=adduser --login=mylogin --password=mypassword --jwtkey=*** --mongo=mongo:27017
+```
+
+## Get token for user
+```bash
+
+```
+
 # CLI
 
 ## Modes

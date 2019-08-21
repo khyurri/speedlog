@@ -26,7 +26,7 @@ const (
 	GroupByMonths = iota
 )
 
-// Mongo event document
+// Event — mongo event document
 type Event struct {
 	MetricName     string        `bson:"metric_name" json:"metric_name"`
 	MetricTime     time.Time     `bson:"metric_time,omitempty" json:"metric_time"`
@@ -42,7 +42,7 @@ type SaveEventReq struct {
 	DurationMs float64 `json:"duration_ms,omitempty"`
 }
 
-// Check and cast function type
+// CACFunc — check and cast function type
 type CACFunc func(string, *Event, *engine.Engine) error
 
 // ROUTES
@@ -67,7 +67,7 @@ func ExportRoutes(router *mux.Router, app *rest.App) {
 //
 //////////////////////////////////////////////////////////////////////
 
-// PUT /pravoved.ru/event/
+// SaveEventHttp PUT /pravoved.ru/event/
 func SaveEventHttp(w http.ResponseWriter, r *http.Request, eng *engine.Engine) {
 	var err error
 
@@ -98,7 +98,7 @@ func SaveEventHttp(w http.ResponseWriter, r *http.Request, eng *engine.Engine) {
 
 }
 
-// GET /pravoved.ru/events/?metric_time_from=2019-08-02T00:00:00&metric_time_to=2019-08-03T00:00:00&group_by=minutes&metric_name=backend_response
+// GetEventsHttp GET /pravoved.ru/events/?metric_time_from=2019-08-02T00:00:00&metric_time_to=2019-08-03T00:00:00&group_by=minutes&metric_name=backend_response
 // 	group_by : minutes, hours, days
 func GetEventsHttp(w http.ResponseWriter, r *http.Request, eng *engine.Engine) {
 	response := &rest.Resp{}

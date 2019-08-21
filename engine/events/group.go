@@ -1,7 +1,6 @@
 package events
 
 import (
-	"errors"
 	"fmt"
 	"github.com/khyurri/speedlog/engine"
 	"github.com/montanaflynn/stats"
@@ -26,7 +25,7 @@ func GroupBy(group string, events []Event, eng *engine.Engine) (result FilteredE
 		"days":    groupByDays,
 	}
 	if nil == m[group] {
-		return result, errors.New(fmt.Sprintf("unsupported group key %s", group))
+		return result, fmt.Errorf("unsupported group key %s", group)
 	}
 	result = mapEvent(events, m[group])
 	ordered(result)

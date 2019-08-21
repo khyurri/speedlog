@@ -12,6 +12,6 @@ FROM alpine:3.10
 
 RUN mkdir /opt/speedlog
 WORKDIR /opt/speedlog
-COPY --from=0 /go/src/app/main .
+COPY --from=golang /go/src/app/main .
 
 EXPOSE 8012

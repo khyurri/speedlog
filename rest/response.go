@@ -14,6 +14,7 @@ const (
 	StatusExists    = 4
 )
 
+// struct for http response
 type Resp struct {
 	Status   int
 	JsonBody []byte
@@ -37,6 +38,7 @@ func (r *Resp) setHeader(w http.ResponseWriter) {
 	}
 }
 
+// just render JSON response from struct Resp
 func (r *Resp) Render(w http.ResponseWriter) {
 	r.setHeader(w)
 	w.Header().Set("Content-Type", "application/json")
@@ -47,6 +49,7 @@ func (r *Resp) Render(w http.ResponseWriter) {
 	}
 }
 
+// returns struct ready for rendering with text message
 func InvalidRequestParams(message string) interface{} {
 	return struct {
 		Message string `json:"message"`

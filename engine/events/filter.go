@@ -6,6 +6,7 @@ import (
 	"time"
 )
 
+// Filter — mongodb request for filtering events
 type Filter struct {
 	MetricName     string        `bson:"metric_name"`
 	ProjectId      bson.ObjectId `bson:"project_id"`
@@ -13,6 +14,7 @@ type Filter struct {
 	MetricTimeTo   time.Time     `bson:"metric_time_to,omitempty"`
 }
 
+// todo: refactor
 type FilteredEvent struct {
 	MetricName       string        `bson:"metric_name"`
 	MetricTime       time.Time     `bson:"metric_time,omitempty"`
@@ -25,6 +27,7 @@ type FilteredEvent struct {
 	durationsMs      []float64
 }
 
+// todo: refactor
 type FilteredEvents []*FilteredEvent
 
 func (req *Filter) FilterEvents(eng *engine.Engine) (events []Event, err error) {

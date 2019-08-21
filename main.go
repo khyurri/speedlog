@@ -15,7 +15,7 @@ import (
 	"time"
 )
 
-type Config struct {
+type config struct {
 	Mode     string `arg:"-m" help:"Available modes: runserver, adduser"`
 	Mongo    string `arg:"-d" help:"Mongodb url. Default 127.0.0.1:27017"`
 	Login    string `arg:"-l" help:"Mode adduser. Login for new user "`
@@ -23,10 +23,16 @@ type Config struct {
 	JWTKey   string `arg:"-j" help:"JWT secret key."`
 }
 
-func RunApp(config *Config, eng *engine.Engine) {
+func runApp(cfg *config, eng *engine.Engine) {
 
-	switch config.Mode {
+	switch cfg.Mode {
 	case "runserver":
+
+		if len(cfg.JWTKey) == 0 {
+			eng.Logger.Panic("missing jwtkey")
+			return
+		}
+
 		app := rest.New(eng)
 		r := mux.NewRouter()
 
@@ -42,7 +48,7 @@ func RunApp(config *Config, eng *engine.Engine) {
 		}
 		log.Fatal(srv.ListenAndServe())
 	case "adduser":
-		err := users.AddUser(config.Login, config.Password, eng)
+		err := users.AddUser(cfg.Login, cfg.Password, eng)
 		if err != nil {
 			log.Fatal(err)
 		}
@@ -51,7 +57,7 @@ func RunApp(config *Config, eng *engine.Engine) {
 
 func main() {
 
-	config := &Config{}
+	config := &config{}
 
 	////////////////////////////////////////
 	//
@@ -63,10 +69,6 @@ func main() {
 
 	arg.MustParse(config)
 	logger := log.New(os.Stdout, "speedlog ", log.LstdFlags|log.Lshortfile)
-	if len(config.JWTKey) == 0 {
-		logger.Panic("missing jwtkey")
-		return
-	}
 
 	dbEngine, err := mongo.New("speedlog", config.Mongo, logger)
 
@@ -78,6 +80,6 @@ func main() {
 	}
 
 	eng := engine.New(dbEngine, logger, config.JWTKey)
-	RunApp(config, eng)
+	runApp(config, eng)
 
 }
