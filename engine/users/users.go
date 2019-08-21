@@ -66,11 +66,8 @@ func AuthenticateHttp(w http.ResponseWriter, r *http.Request, eng *engine.Engine
 	}
 
 	// GENERATE TOKEN //
-	eng.Logger.Println("----------------------------")
-	eng.Logger.Println(u.Login)
-	eng.Logger.Println("----------------------------")
 	_, tokenString, err := eng.SigningKey.Encode(
-		jwt.MapClaims{"source": "rest", "issuer": u.Login})
+		jwt.MapClaims{"source": "rest", "issuer": "hello"})
 
 	if err != nil {
 		invalidAuthRequest(response)
@@ -97,10 +94,9 @@ func Authenticate(login string, password string, eng *engine.Engine) (err error)
 	if err != nil {
 		if err.Error() == "not found" {
 			return errors.New("user does not exists")
-		} else {
-			eng.Logger.Fatal(err)
-			return
 		}
+		eng.Logger.Fatal(err)
+		return
 	}
 	return
 }
