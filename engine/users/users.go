@@ -76,7 +76,11 @@ func AuthenticateHttp(w http.ResponseWriter, r *http.Request, eng *engine.Engine
 }
 
 func AddUser(login string, password string, eng *engine.Engine) (err error) {
-	u := &User{login, password}
+	hashedPassword, err := HashPassword(password)
+	if err != nil {
+		return
+	}
+	u := &User{login, hashedPassword}
 	if len(u.Login) == 0 || len(u.Password) == 0 {
 		err = errors.New("login or password cannot be empty")
 		return
@@ -88,8 +92,7 @@ func AddUser(login string, password string, eng *engine.Engine) (err error) {
 func Authenticate(login string, password string, eng *engine.Engine) (err error) {
 	var u User
 	err = eng.DBEngine.Collection("users").Find(bson.M{
-		"login":    login,
-		"password": password,
+		"login": login,
 	}).One(&u)
 	if err != nil {
 		if err.Error() == "not found" {
@@ -97,6 +100,9 @@ func Authenticate(login string, password string, eng *engine.Engine) (err error)
 		}
 		eng.Logger.Fatal(err)
 		return
+	}
+	if !IsMatch(u.Password, password) {
+		return errors.New("wrong password")
 	}
 	return
 }
