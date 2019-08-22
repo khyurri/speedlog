@@ -31,8 +31,8 @@ func runApp(cfg *config, env engine.AppEnvironment) {
 		r := mux.NewRouter()
 
 		env.ExportEventRoutes(r)
-		env.ExportUserRoutes(r)
-		env.ExportProjectRoutes(r)
+		//env.ExportUserRoutes(r)
+		//env.ExportProjectRoutes(r)
 
 		srv := &http.Server{
 			Handler:      r,
@@ -72,7 +72,7 @@ func main() {
 		return
 	}
 
-	eng := engine.New(dbEngine, logger, config.JWTKey)
+	eng := engine.NewEnv(dbEngine, logger, config.JWTKey)
 	runApp(config, eng)
 
 }

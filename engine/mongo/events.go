@@ -45,12 +45,22 @@ type Filter struct {
 	MetricTimeTo   time.Time     `bson:"metric_time_to,omitempty"`
 }
 
-func (mg *Mongo) SaveEvent(event *Event) (err error) {
+func (mg *Mongo) SaveEvent(metricName, projectId string, durationMs float64) (err error) {
 
 	sess := mg.Clone()
 	defer sess.Close()
 
-	err = mg.Collection(eventCollection, sess).Insert(event)
+	err = mg.Collection(eventCollection, sess).Insert(struct {
+		MetricName string    `bson:"metricName"`
+		ProjectId  string    `bson:"projectId"`
+		DurationMs float64   `bson:"durationMs"`
+		MetricTime time.Time `bson:"metricTime"`
+	}{
+		metricName,
+		projectId,
+		durationMs,
+		time.Now(),
+	})
 	return
 }
 

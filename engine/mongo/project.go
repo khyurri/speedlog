@@ -9,7 +9,7 @@ type Project struct {
 	Title string        `bson:"title"`
 }
 
-func (mg *Mongo) ProjectExists(title string) (projectId bson.ObjectId, err error) {
+func (mg *Mongo) ProjectExists(title string) (projectId string, err error) {
 
 	sess := mg.Clone()
 	defer sess.Close()
@@ -19,7 +19,7 @@ func (mg *Mongo) ProjectExists(title string) (projectId bson.ObjectId, err error
 	if err != nil {
 		return
 	} else {
-		projectId = t.ID
+		projectId = string(t.ID)
 	}
 	return
 }

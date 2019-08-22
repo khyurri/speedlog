@@ -2,7 +2,6 @@ package mongo
 
 import (
 	"github.com/globalsign/mgo"
-	"github.com/globalsign/mgo/bson"
 )
 
 const (
@@ -14,11 +13,11 @@ const (
 type DataStore interface {
 	AddUser(login string, password string) (err error)
 	Authenticate(login string, password string) (err error)
-	ProjectExists(title string) (projectId bson.ObjectId, err error)
+	ProjectExists(title string) (projectId string, err error)
 	RegisterProject(title string) bool
-	FilterEvents(req *Filter) (events []interface{}, err error)
-	GroupBy(group string, events []interface{}) (result []*AggregatedEvent, err error)
-	SaveEvent(event interface{}) (err error)
+	FilterEvents(req *Filter) (events []*AggregatedEvent, err error)
+	GroupBy(group string, events []*Event) (result []*AggregatedEvent, err error)
+	SaveEvent(metricName, projectId string, durationMs float64) (err error)
 }
 
 type Mongo struct {
