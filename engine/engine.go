@@ -33,7 +33,7 @@ func (env *Env) ExportProjectRoutes(router *mux.Router) {
 	private := router.PathPrefix("/private/").Subrouter()
 	private.HandleFunc("/project/", env.addProjectHttp()).
 		Methods("PUT")
-	//private.Use(env.JWTMiddleware)
+	private.Use(env.JWTMiddleware)
 }
 
 func (env *Env) ExportEventRoutes(router *mux.Router) {
@@ -48,6 +48,5 @@ func (env *Env) ExportEventRoutes(router *mux.Router) {
 		Queries("metricTimeTo", "{metricTimeTo:.+}").
 		Queries("project", "{project:.+}").
 		Queries("groupBy", "{groupBy:.+}")
-
 	//private.Use(env.JWTMiddleware)
 }
