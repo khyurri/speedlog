@@ -48,5 +48,5 @@ func (env *Env) ExportEventRoutes(router *mux.Router) {
 		Queries("metricTimeTo", "{metricTimeTo:.+}").
 		Queries("project", "{project:.+}").
 		Queries("groupBy", "{groupBy:.+}")
-	//private.Use(env.JWTMiddleware)
+	private.Use(env.JWTMiddleware)
 }
