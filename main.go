@@ -19,36 +19,6 @@ type config struct {
 	JWTKey   string `arg:"-j" help:"JWT secret key."`
 }
 
-func runApp(cfg *config, env engine.AppEnvironment) {
-
-	switch cfg.Mode {
-	case "runserver":
-
-		if len(cfg.JWTKey) == 0 {
-			return
-		}
-
-		r := mux.NewRouter()
-
-		env.ExportEventRoutes(r)
-		//env.ExportUserRoutes(r)
-		//env.ExportProjectRoutes(r)
-
-		srv := &http.Server{
-			Handler:      r,
-			Addr:         ":8012",
-			WriteTimeout: 15 * time.Second,
-			ReadTimeout:  15 * time.Second,
-		}
-		log.Fatal(srv.ListenAndServe())
-		//case "adduser":
-		//	//err := users.AddUser(cfg.Login, cfg.Password, env)
-		//	if err != nil {
-		//		log.Fatal(err)
-		//	}
-	}
-}
-
 func main() {
 
 	config := &config{}
@@ -72,7 +42,33 @@ func main() {
 		return
 	}
 
-	eng := engine.NewEnv(dbEngine, config.JWTKey)
-	runApp(config, eng)
+	env := engine.NewEnv(dbEngine, config.JWTKey)
+	switch config.Mode {
+	case "runserver":
+
+		if len(config.JWTKey) == 0 {
+			engine.Logger.Printf("[error] cannot start server. Required jwtkey")
+			return
+		}
+
+		r := mux.NewRouter()
+
+		env.ExportEventRoutes(r)
+		env.ExportUserRoutes(r)
+		env.ExportProjectRoutes(r)
+
+		srv := &http.Server{
+			Handler:      r,
+			Addr:         ":8012",
+			WriteTimeout: 15 * time.Second,
+			ReadTimeout:  15 * time.Second,
+		}
+		log.Fatal(srv.ListenAndServe())
+	case "adduser":
+		err := env.DBEngine.AddUser(config.Login, config.Password)
+		if err != nil {
+			log.Fatal(err)
+		}
+	}
 
 }

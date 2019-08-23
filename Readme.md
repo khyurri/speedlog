@@ -10,7 +10,7 @@ Run `speedlog` using docker-compose.yml:
 version: '3'
 services:
   app:
-    image: khyurri/speedlog:0.1.0
+    image: khyurri/speedlog:0.1.3
     command: "/opt/speedlog/main --jwtkey=*** --mongo=mongo:27017"
     depends_on:
       - mongo
@@ -25,7 +25,7 @@ services:
 ## Create user
 
 ```bash
-docker exec -it speedlog_app_1 /opt/speedlog/main --mode=adduser --login=mylogin --password=mypassword --jwtkey=*** --mongo=mongo:27017
+docker exec -it speedlog_app_1 /opt/speedlog/main --mode=adduser --login=mylogin --password=mypassword --mongo=mongo:27017
 ```
 
 ## Get token for user
