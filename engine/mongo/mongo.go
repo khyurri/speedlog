@@ -3,38 +3,93 @@ package mongo
 import (
 	"github.com/globalsign/mgo"
 	"log"
+	"os"
+	"sync"
+	"time"
 )
 
-type Engine struct {
-	Session *mgo.Session
-	DB      string
-	logger  *log.Logger
+var (
+	logger *log.Logger
+	once   sync.Once
+)
+
+const (
+	userCollection    = "user"
+	projectCollection = "project"
+	eventCollection   = "event"
+)
+
+type DataStore interface {
+	FilterEvents(from, to time.Time, metricName, project string) (events []*Event, err error)
+	SaveEvent(metricName, project string, durationMs float64) (err error)
+
+	AddUser(login string, password string) (err error)
+	GetUser(login string) (*user, error)
+	UserDel(uid string) error
+
+	AddProject(title string) error
+	GetProject(title string) (projectId string, err error)
+	DelProject(id string) (err error)
 }
 
-func New(db string, url string, logger *log.Logger) (engine *Engine, err error) {
-	engine = &Engine{DB: db, logger: logger}
+type Mongo struct {
+	Session *mgo.Session
+	DbName  string
+}
+
+func New(db string, url string) (engine *Mongo, err error) {
+	logger = log.New(os.Stdout, "speedlog mongodb ", log.LstdFlags|log.Lshortfile)
+	engine = &Mongo{DbName: db}
 	engine.Session, err = mgo.Dial(url)
+	if err != nil {
+		return
+	}
+	err = engine.CreateIndexes()
 	return engine, err
 }
 
-func (engine *Engine) Clone() *Engine {
-	session := engine.Session.Clone()
-	return &Engine{
-		Session: session,
-		DB:      engine.DB,
-		logger:  engine.logger,
+func (mg *Mongo) Clone() *mgo.Session {
+	return mg.Session.Clone()
+}
+
+func (mg *Mongo) Collection(collection string, sess *mgo.Session) *mgo.Collection {
+	if sess == nil {
+		sess = mg.Session
 	}
+	return sess.DB(mg.DbName).C(collection)
 }
 
-func (engine *Engine) Close() {
-	engine.Session.Close()
+// DropDatabase - !run only for testing!
+func (mg *Mongo) DropDatabase() error {
+	return mg.Session.DB(mg.DbName).DropDatabase()
 }
 
-func (engine *Engine) Collection(collection string) *mgo.Collection {
-	return engine.Session.DB(engine.DB).C(collection)
-}
+func (mg *Mongo) CreateIndexes() (err error) {
+	once.Do(func() {
+		logger.Printf("[debug] index check")
 
-// run only for testing
-func (engine *Engine) DropDatabase() error {
-	return engine.Session.DB(engine.DB).DropDatabase()
+		logger.Printf("[debug] collection `user`")
+		coll := mg.Collection(userCollection, nil)
+		err = coll.EnsureIndex(mgo.Index{
+			Key:    []string{"login"},
+			Unique: true,
+		})
+		if err != nil {
+			logger.Printf("[error] cannot create index `user`: %s", err)
+		}
+
+		logger.Printf("[debug] collection `project`")
+		coll = mg.Collection(projectCollection, nil)
+		err = coll.EnsureIndex(mgo.Index{
+			Key:    []string{"title"},
+			Unique: true,
+		})
+
+		if err != nil {
+			logger.Printf("[error] cannot create index `project`: %s", err)
+		}
+
+		logger.Printf("[debug] index check complete")
+	})
+	return
 }

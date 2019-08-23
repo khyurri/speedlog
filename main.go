@@ -4,11 +4,7 @@ import (
 	"github.com/alexflint/go-arg"
 	"github.com/gorilla/mux"
 	"github.com/khyurri/speedlog/engine"
-	"github.com/khyurri/speedlog/engine/events"
 	"github.com/khyurri/speedlog/engine/mongo"
-	"github.com/khyurri/speedlog/engine/projects"
-	"github.com/khyurri/speedlog/engine/users"
-	"github.com/khyurri/speedlog/rest"
 	"log"
 	"net/http"
 	"os"
@@ -23,22 +19,20 @@ type config struct {
 	JWTKey   string `arg:"-j" help:"JWT secret key."`
 }
 
-func runApp(cfg *config, eng *engine.Engine) {
+func runApp(cfg *config, env engine.AppEnvironment) {
 
 	switch cfg.Mode {
 	case "runserver":
 
 		if len(cfg.JWTKey) == 0 {
-			eng.Logger.Panic("missing jwtkey")
 			return
 		}
 
-		app := rest.New(eng)
 		r := mux.NewRouter()
 
-		events.ExportRoutes(r, app)
-		users.ExportRoutes(r, app)
-		projects.ExportRoutes(r, app)
+		env.ExportEventRoutes(r)
+		//env.ExportUserRoutes(r)
+		//env.ExportProjectRoutes(r)
 
 		srv := &http.Server{
 			Handler:      r,
@@ -47,11 +41,11 @@ func runApp(cfg *config, eng *engine.Engine) {
 			ReadTimeout:  15 * time.Second,
 		}
 		log.Fatal(srv.ListenAndServe())
-	case "adduser":
-		err := users.AddUser(cfg.Login, cfg.Password, eng)
-		if err != nil {
-			log.Fatal(err)
-		}
+		//case "adduser":
+		//	//err := users.AddUser(cfg.Login, cfg.Password, env)
+		//	if err != nil {
+		//		log.Fatal(err)
+		//	}
 	}
 }
 
@@ -68,18 +62,17 @@ func main() {
 	////////////////////////////////////////
 
 	arg.MustParse(config)
-	logger := log.New(os.Stdout, "speedlog ", log.LstdFlags|log.Lshortfile)
+	engine.Logger = log.New(os.Stdout, "speedlog ", log.LstdFlags|log.Lshortfile)
 
-	dbEngine, err := mongo.New("speedlog", config.Mongo, logger)
-
-	defer dbEngine.Close()
+	dbEngine, err := mongo.New("speedlog", config.Mongo)
+	defer dbEngine.Session.Close()
 
 	if err != nil {
-		logger.Fatalf("failed to initialize mongo: %v", err)
+		engine.Logger.Fatalf("failed to initialize mongo: %v", err)
 		return
 	}
 
-	eng := engine.New(dbEngine, logger, config.JWTKey)
+	eng := engine.NewEnv(dbEngine, config.JWTKey)
 	runApp(config, eng)
 
 }
