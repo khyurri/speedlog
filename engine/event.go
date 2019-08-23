@@ -18,7 +18,7 @@ func (env *Env) saveEventHttp() http.HandlerFunc {
 	type request struct {
 		MetricName string  `json:"metricName"`
 		DurationMs float64 `json:"durationMs"`
-		Project    string  `json:"Project"`
+		Project    string  `json:"project"`
 	}
 
 	mapRequestToStruct := func(r *http.Request, target *request) (err error) {
@@ -105,6 +105,6 @@ func (env *Env) getEventsHttp() http.HandlerFunc {
 			response.Status = StatusOk
 			return
 		}
-		response.JsonBody, err = json.Marshal(events)
+		response.JsonBody, err = json.Marshal(grouped)
 	}
 }

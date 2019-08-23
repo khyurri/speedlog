@@ -30,7 +30,55 @@ docker exec -it speedlog_app_1 /opt/speedlog/main --mode=adduser --login=mylogin
 
 ## Get token for user
 ```bash
+curl -X POST -H "Content-Type: application/json" -d '{"login": "mylogin", "password": "mypassword"}' http://localhost:8012/login/
+```
 
+## Create project
+After you get `token`, you can create new project
+
+```bash
+curl -X PUT -H "Authorization: Bearer {{ token_here }}" -H "Content-Type: application/json" -d '{"title": "myproject"}' http://localhost:8012/private/project/
+``` 
+
+## Save event 
+
+```bash
+curl -X PUT -H "Content-Type: application/json" -d '{"metricName": "backendResponse", "durationMs": 300, "project": "myproject"}' http://localhost:8012/event/
+```
+
+## Get events
+
+```bash
+ curl -H "Authorization: Bearer {{ token_here }}" -H "Content-Type: application/json" "http://localhost:8012/private/events/?metricName=backendResponse&metricTimeFrom=2019-08-20T01:10&metricTimeTo=2019-08-25T00:00&groupBy=minutes&project=myproject"
+```
+
+> Don't forget to change dates on `metricTimeFrom=2019-08-20T01:10&metricTimeTo=2019-08-25T00:00`
+
+You will get something like that
+
+```json
+[
+    {
+        "MetricName":"backendResponse",
+        "MetricTime":"2019-08-23T14:16:00Z",
+        "DurationMs":0,
+        "MinDurationMs":300,
+        "MaxDurationMs":300,
+        "MedianDurationMs":300,
+        "MiddleDurationMs":300,
+        "EventCount":1
+    },
+    {
+        "MetricName":"backendResponse",
+        "MetricTime":"2019-08-23T14:27:00Z",
+        "DurationMs":0,
+        "MinDurationMs":310,
+        "MaxDurationMs":310,
+        "MedianDurationMs":310,
+        "MiddleDurationMs":310,
+        "EventCount":1
+    }
+]
 ```
 
 # CLI
