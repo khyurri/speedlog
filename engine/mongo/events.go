@@ -8,22 +8,12 @@ import (
 	"time"
 )
 
-//type Event struct {
-//	MetricName string        `bson:"metric_name" json:"metric_name"`
-//	MetricTime time.Time     `bson:"metric_time,omitempty" json:"metric_time"`
-//	ProjectId  bson.ObjectId `bson:"project_id" json:"project_id"`
-//	DurationMs float64       `bson:"duration_ms,omitempty" json:"duration_ms,omitempty"`
-//	MetricTimeFrom time.Time     `bson:"metric_time_from,omitempty" json:"metric_time_from,omitempty"`
-//	MetricTimeTo   time.Time     `bson:"metric_time_to,omitempty" json:"metric_time_to,omitempty"`
-//	GroupBy        int           `bson:"group_by,omitempty" json:"group_by,omitempty"`
-//}
-
 // Event - mongo event document
 type Event struct {
-	MetricName string        `bson:"metric_name"`
-	MetricTime time.Time     `bson:"metric_time,omitempty"`
-	ProjectId  bson.ObjectId `bson:"project_id"`
-	DurationMs float64       `bson:"duration_ms,omitempty"`
+	MetricName string        `bson:"metricName"`
+	MetricTime time.Time     `bson:"metricTime,omitempty"`
+	ProjectId  bson.ObjectId `bson:"projectId"`
+	DurationMs float64       `bson:"durationMs,omitempty"`
 }
 
 // AggregatedEvent - aggregated mongo event document
@@ -37,18 +27,17 @@ type AggregatedEvent struct {
 	durationsMs      []float64
 }
 
-// Filter — mongodb request for filtering events
-type Filter struct {
-	MetricName     string        `bson:"metric_name"`
-	ProjectId      bson.ObjectId `bson:"project_id"`
-	MetricTimeFrom time.Time     `bson:"metric_time_from,omitempty"`
-	MetricTimeTo   time.Time     `bson:"metric_time_to,omitempty"`
-}
-
-func (mg *Mongo) SaveEvent(metricName, projectId string, durationMs float64) (err error) {
+func (mg *Mongo) SaveEvent(metricName, project string, durationMs float64) (err error) {
 
 	sess := mg.Clone()
 	defer sess.Close()
+
+	projectId, err := mg.GetProject(project)
+
+	if err != nil {
+		fmt.Printf("[error] fetch project by name: %s", err)
+		return
+	}
 
 	err = mg.Collection(eventCollection, sess).Insert(struct {
 		MetricName string    `bson:"metricName"`
@@ -64,21 +53,28 @@ func (mg *Mongo) SaveEvent(metricName, projectId string, durationMs float64) (er
 	return
 }
 
-func (mg *Mongo) FilterEvents(req *Filter) (events []*AggregatedEvent, err error) {
+func (mg *Mongo) FilterEvents(from, to time.Time, metricName, project string) (events []*Event, err error) {
 
 	sess := mg.Clone()
 	defer sess.Close()
 
-	events = make([]*AggregatedEvent, 0)
+	projectId, err := mg.GetProject(project)
+
+	if err != nil {
+		fmt.Printf("[error] fetch project by name: %s", err)
+		return
+	}
+
+	events = make([]*Event, 0)
 	err = mg.Collection(eventCollection, sess).
 		Find(bson.M{
-			"project_id": req.ProjectId,
-			"metric_time": bson.M{
-				"$gte": req.MetricTimeFrom,
-				"$lt":  req.MetricTimeTo,
+			"projectId": projectId,
+			"metricTime": bson.M{
+				"$gte": from,
+				"$lt":  to,
 			},
-			"metric_name": req.MetricName,
-		}).Sort("metric_time").All(&events)
+			"metricName": metricName,
+		}).Sort("metricTime").All(&events)
 	return
 }
 
@@ -92,7 +88,7 @@ func average(items []float64) float64 {
 	return acc / float64(len(items))
 }
 
-func (mg *Mongo) GroupBy(group string, events []*Event) (result []*AggregatedEvent, err error) {
+func GroupBy(group string, events []*Event) (result []*AggregatedEvent, err error) {
 	m := map[string]keyFunc{
 		"minutes": groupByMinutes,
 		"hours":   groupByHours,
@@ -103,6 +99,17 @@ func (mg *Mongo) GroupBy(group string, events []*Event) (result []*AggregatedEve
 	}
 	result = mapEvent(events, m[group])
 	ordered(result)
+	return
+}
+
+func (mg *Mongo) delAllEvents(projectId string) (err error) {
+	sess := mg.Clone()
+	defer sess.Close()
+
+	err = mg.Collection(eventCollection, sess).Remove(bson.M{
+		"projectId": projectId,
+	})
+
 	return
 }
 

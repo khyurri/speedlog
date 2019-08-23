@@ -62,17 +62,17 @@ func main() {
 	////////////////////////////////////////
 
 	arg.MustParse(config)
-	logger := log.New(os.Stdout, "speedlog ", log.LstdFlags|log.Lshortfile)
+	engine.Logger = log.New(os.Stdout, "speedlog ", log.LstdFlags|log.Lshortfile)
 
 	dbEngine, err := mongo.New("speedlog", config.Mongo)
 	defer dbEngine.Session.Close()
 
 	if err != nil {
-		logger.Fatalf("failed to initialize mongo: %v", err)
+		engine.Logger.Fatalf("failed to initialize mongo: %v", err)
 		return
 	}
 
-	eng := engine.NewEnv(dbEngine, logger, config.JWTKey)
+	eng := engine.NewEnv(dbEngine, config.JWTKey)
 	runApp(config, eng)
 
 }
