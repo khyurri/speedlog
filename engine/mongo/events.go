@@ -78,6 +78,22 @@ func (mg *Mongo) FilterEvents(from, to time.Time, metricName, project string) (e
 	return
 }
 
+func (mg *Mongo) AllEvents(from, to time.Time) (events []*Event, err error) {
+	sess := mg.Session.Clone()
+	defer sess.Close()
+
+	events = make([]*Event, 0)
+	err = mg.Collection(eventCollection, sess).
+		Find(bson.M{
+			"metricTime": bson.M{
+				"$gte": from,
+				"$lt":  to,
+			},
+		}).Sort("metricTime").All(&events)
+
+	return
+}
+
 type keyFunc func(eventTime time.Time) time.Time
 
 func average(items []float64) float64 {

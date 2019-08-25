@@ -14,15 +14,15 @@ import (
 	"testing"
 )
 
-type ProjectTestSuit struct {
+type ProjectTestSuite struct {
 	suite.Suite
 }
 
-func (suite *ProjectTestSuit) SetupTest() {
+func (suite *ProjectTestSuite) SetupTest() {
 	Logger = log.New(os.Stdout, "speedlog ", log.LstdFlags|log.Lshortfile)
 }
 
-func (suite *ProjectTestSuit) TestCreateProject() {
+func (suite *ProjectTestSuite) TestCreateProject() {
 	project := "test_project"
 	dbEngine, _ := mongo.New("speedlog", "127.0.0.1:27017")
 	err := dbEngine.AddProject(project)
@@ -36,7 +36,7 @@ func (suite *ProjectTestSuit) TestCreateProject() {
 	assert.Nil(suite.T(), err)
 }
 
-func (suite *ProjectTestSuit) TestCreateProjectHTTP() {
+func (suite *ProjectTestSuite) TestCreateProjectHTTP() {
 	project := "test_http_project"
 	login, password := "admin10", "superpassword"
 	dbEngine, _ := mongo.New("speedlog", "127.0.0.1:27017")
@@ -95,5 +95,5 @@ func (suite *ProjectTestSuit) TestCreateProjectHTTP() {
 }
 
 func TestProject(t *testing.T) {
-	suite.Run(t, new(ProjectTestSuit))
+	suite.Run(t, new(ProjectTestSuite))
 }

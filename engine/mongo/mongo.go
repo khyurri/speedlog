@@ -21,6 +21,7 @@ const (
 
 type DataStore interface {
 	FilterEvents(from, to time.Time, metricName, project string) (events []*Event, err error)
+	AllEvents(from, to time.Time) (events []*Event, err error)
 	SaveEvent(metricName, project string, durationMs float64) (err error)
 
 	AddUser(login string, password string) (err error)

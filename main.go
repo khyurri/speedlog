@@ -5,6 +5,7 @@ import (
 	"github.com/gorilla/mux"
 	"github.com/khyurri/speedlog/engine"
 	"github.com/khyurri/speedlog/engine/mongo"
+	"github.com/khyurri/speedlog/plugins"
 	"log"
 	"net/http"
 	"os"
@@ -52,6 +53,9 @@ func main() {
 		}
 
 		r := mux.NewRouter()
+
+		graphite := plugins.NewGraphite("1")
+		graphite.Load(dbEngine)
 
 		env.ExportEventRoutes(r)
 		env.ExportUserRoutes(r)
