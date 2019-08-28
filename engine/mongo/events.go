@@ -107,8 +107,6 @@ func average(items []float64) float64 {
 func GroupBy(group string, events []*Event) (result []*AggregatedEvent, err error) {
 	m := map[string]keyFunc{
 		"minutes": groupByMinutes,
-		"hours":   groupByHours,
-		"days":    groupByDays,
 	}
 	if nil == m[group] {
 		return result, fmt.Errorf("unsupported group key %s", group)
@@ -136,22 +134,6 @@ func groupByMinutes(eventTime time.Time) time.Time {
 		eventTime.Day(),
 		eventTime.Hour(),
 		eventTime.Minute(), 0, 0, time.UTC)
-}
-
-func groupByHours(eventTime time.Time) time.Time {
-	return time.Date(
-		eventTime.Year(),
-		eventTime.Month(),
-		eventTime.Day(),
-		eventTime.Hour(),
-		0, 0, 0, time.UTC)
-}
-
-func groupByDays(eventTime time.Time) time.Time {
-	return time.Date(
-		eventTime.Year(),
-		eventTime.Month(),
-		eventTime.Day(), 0, 0, 0, 0, time.UTC)
 }
 
 func mapEvent(event []*Event, keyFunc keyFunc) (result []*AggregatedEvent) {
