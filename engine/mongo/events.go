@@ -16,6 +16,14 @@ type Event struct {
 	DurationMs float64       `bson:"durationMs,omitempty"`
 }
 
+type AllEvents struct {
+	Meta struct {
+		ProjectId  string `bson:"projectId"`
+		MetricName string `bson:"metricName"`
+	} `bson:"_id"`
+	Events []Event `bson:"events"`
+}
+
 // AggregatedEvent - aggregated mongo event document
 type AggregatedEvent struct {
 	Event
@@ -53,7 +61,7 @@ func (mg *Mongo) SaveEvent(metricName, project string, durationMs float64) (err 
 	return
 }
 
-func (mg *Mongo) FilterEvents(from, to time.Time, metricName, project string) (events []*Event, err error) {
+func (mg *Mongo) FilterEvents(from, to time.Time, metricName, project string) (events []Event, err error) {
 
 	sess := mg.Clone()
 	defer sess.Close()
@@ -65,7 +73,7 @@ func (mg *Mongo) FilterEvents(from, to time.Time, metricName, project string) (e
 		return
 	}
 
-	events = make([]*Event, 0)
+	events = make([]Event, 0)
 	err = mg.Collection(eventCollection, sess).
 		Find(bson.M{
 			"projectId": projectId,
@@ -78,19 +86,45 @@ func (mg *Mongo) FilterEvents(from, to time.Time, metricName, project string) (e
 	return
 }
 
-func (mg *Mongo) AllEvents(from, to time.Time) (events []*Event, err error) {
+func (mg *Mongo) AllEvents(from, to time.Time) (events []AllEvents, err error) {
 	sess := mg.Session.Clone()
 	defer sess.Close()
 
-	events = make([]*Event, 0)
-	err = mg.Collection(eventCollection, sess).
-		Find(bson.M{
+	events = make([]AllEvents, 0)
+
+	c := mg.Collection(eventCollection, sess)
+	pipe := c.Pipe([]bson.M{{
+		"$match": bson.M{
 			"metricTime": bson.M{
 				"$gte": from,
 				"$lt":  to,
 			},
-		}).Sort("metricTime").All(&events)
+		},
+	}, {
+		"$group": bson.M{
+			"_id": bson.M{
+				"projectId":  "$projectId",
+				"metricName": "$metricName",
+			},
+			"events": bson.M{"$push": "$$ROOT"},
+		},
+	},
+	})
+	iter := pipe.Iter()
+	defer func() {
+		err = iter.Close()
+		if err != nil {
+			fmt.Printf("[error] close iter: %s\n", err)
+		}
+	}()
+	var grouped AllEvents
 
+	for iter.Next(&grouped) {
+		events = append(events, grouped)
+	}
+	if iter.Err() != nil {
+		fmt.Printf("[error] iter: %s\n", err)
+	}
 	return
 }
 
@@ -104,7 +138,7 @@ func average(items []float64) float64 {
 	return acc / float64(len(items))
 }
 
-func GroupBy(group string, events []*Event) (result []*AggregatedEvent, err error) {
+func GroupBy(group string, events []Event) (result []*AggregatedEvent, err error) {
 	m := map[string]keyFunc{
 		"minutes": groupByMinutes,
 	}
@@ -136,7 +170,7 @@ func groupByMinutes(eventTime time.Time) time.Time {
 		eventTime.Minute(), 0, 0, time.UTC)
 }
 
-func mapEvent(event []*Event, keyFunc keyFunc) (result []*AggregatedEvent) {
+func mapEvent(event []Event, keyFunc keyFunc) (result []*AggregatedEvent) {
 
 	if len(event) == 0 {
 		return
