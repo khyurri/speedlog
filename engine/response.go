@@ -44,7 +44,8 @@ func (r *Resp) Render(w http.ResponseWriter) {
 	w.Header().Set("Content-Type", "application/json")
 	_, err := w.Write(r.JsonBody)
 	if err != nil {
-		r.Logger.Fatal(err)
+		// TODO: fix null pointer exception
+		// r.Logger.Fatal(err)
 		return
 	}
 }

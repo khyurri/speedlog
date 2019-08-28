@@ -12,11 +12,12 @@ import (
 )
 
 type config struct {
-	Mode     string `arg:"-m" help:"Available modes: runserver, adduser"`
-	Mongo    string `arg:"-d" help:"Mongodb url. Default 127.0.0.1:27017"`
-	Login    string `arg:"-l" help:"Mode adduser. Login for new user "`
-	Password string `arg:"-p" help:"Mode adduser. Password for new user"`
-	JWTKey   string `arg:"-j" help:"JWT secret key."`
+	Mode        string `arg:"-m" help:"Available modes: runserver, adduser"`
+	Mongo       string `arg:"-d" help:"Mongodb url. Default 127.0.0.1:27017"`
+	Login       string `arg:"-l" help:"Mode adduser. Login for new user"`
+	Password    string `arg:"-p" help:"Mode adduser. Password for new user"`
+	JWTKey      string `arg:"-j" help:"JWT secret key."`
+	AllowOrigin string `arg:"-o" help:"Add Access-Control-Allow-Origin header with passed by param value"`
 }
 
 func main() {
@@ -43,6 +44,9 @@ func main() {
 	}
 
 	env := engine.NewEnv(dbEngine, config.JWTKey)
+	if len(config.AllowOrigin) > 0 {
+		env.AllowOrigin = config.AllowOrigin
+	}
 	switch config.Mode {
 	case "runserver":
 
