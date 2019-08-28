@@ -61,7 +61,7 @@ func (env *Env) saveEventHttp() http.HandlerFunc {
 			response.JsonBody, err = json.Marshal(saved)
 		}
 		if err != nil {
-			Logger.Fatal(err)
+			Logger.Printf("[error] %s", err)
 			response.Status = StatusIntErr
 			return
 		}

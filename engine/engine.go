@@ -14,39 +14,47 @@ type AppEnvironment interface {
 
 // Env - core struct for storing dependencies
 type Env struct {
-	DBEngine   mongo.DataStore
-	SigningKey *jwtauth.JWTAuth
+	DBEngine    mongo.DataStore
+	SigningKey  *jwtauth.JWTAuth
+	AllowOrigin string
 }
 
 // NewEnv - create new env struct
 func NewEnv(dbEngine mongo.DataStore, signingKey string) *Env {
 	k := jwtauth.New("HS256", []byte(signingKey), nil)
-	return &Env{dbEngine, k}
+	return &Env{
+		DBEngine:   dbEngine,
+		SigningKey: k,
+	}
 }
 
 func (env *Env) ExportUserRoutes(router *mux.Router) {
 	router.HandleFunc("/login/", env.authenticateHttp()).
-		Methods("POST")
+		Methods("POST", "OPTIONS")
+	router.Use(env.corsMiddleware)
 }
 
 func (env *Env) ExportProjectRoutes(router *mux.Router) {
 	private := router.PathPrefix("/private/").Subrouter()
 	private.HandleFunc("/project/", env.addProjectHttp()).
-		Methods("PUT")
+		Methods("PUT", "OPTIONS")
+	router.Use(env.corsMiddleware)
 	private.Use(env.JWTMiddleware)
 }
 
 func (env *Env) ExportEventRoutes(router *mux.Router) {
 	router.HandleFunc("/event/", env.saveEventHttp()).
-		Methods("PUT")
+		Methods("PUT", "POST", "OPTIONS")
 
 	private := router.PathPrefix("/private/").Subrouter()
 	private.HandleFunc("/events/", env.getEventsHttp()).
-		Methods("GET").
+		Methods("GET", "OPTIONS").
 		Queries("metricName", "{metricName:.+}").
 		Queries("metricTimeFrom", "{metricTimeFrom:.+}").
 		Queries("metricTimeTo", "{metricTimeTo:.+}").
 		Queries("project", "{project:.+}").
 		Queries("groupBy", "{groupBy:.+}")
+
+	router.Use(env.corsMiddleware)
 	private.Use(env.JWTMiddleware)
 }
