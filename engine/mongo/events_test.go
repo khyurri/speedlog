@@ -1,7 +1,6 @@
 package mongo
 
 import (
-	"fmt"
 	"testing"
 	"time"
 )
@@ -13,9 +12,11 @@ func TestAllEvents(t *testing.T) {
 		t.Fail()
 	}
 	// Create some events
-	for i := 0; i < 10; i++ {
-		err = mongo.SaveEvent("ev0", "myproject", 100+float64(i))
-		err = mongo.SaveEvent("ev1", "myproject", 90+float64(i))
+	testEvents := [2]string{"ev0", "ev1"}
+	for _, e := range testEvents {
+		for i := 0; i < 10; i++ {
+			_ = mongo.SaveEvent(e, "myproject", 100+float64(i))
+		}
 	}
 	now := time.Now()
 	loc, _ := time.LoadLocation("Europe/Moscow")
@@ -25,9 +26,11 @@ func TestAllEvents(t *testing.T) {
 	if err != nil {
 		t.Logf("[error] %s\n", err)
 	}
-	for _, group := range events {
+	for i, group := range events {
 		aggregated, _ := GroupBy("minutes", group.Events)
-		fmt.Println(aggregated[0].Event.ProjectId)
-		fmt.Println(aggregated[0].Event.MetricName)
+		// todo: aggregated order is not constant!
+		if testEvents[i] != aggregated[0].Event.MetricName {
+			t.Failed()
+		}
 	}
 }

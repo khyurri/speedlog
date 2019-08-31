@@ -12,53 +12,68 @@ import (
 	"time"
 )
 
-type config struct {
-	Mode        string `arg:"-m" help:"Available modes: runserver, adduser"`
-	Mongo       string `arg:"-d" help:"Mongodb url. Default 127.0.0.1:27017"`
-	Login       string `arg:"-l" help:"Mode adduser. Login for new user"`
-	Password    string `arg:"-p" help:"Mode adduser. Password for new user"`
-	JWTKey      string `arg:"-j" help:"JWT secret key."`
-	AllowOrigin string `arg:"-o" help:"Add Access-Control-Allow-Origin header with passed by param value"`
+const defaultTimezone = "UTC-0"
+
+func parseTZ(timezone string) (*time.Location, error) {
+	if timezone == defaultTimezone {
+		return time.FixedZone(timezone, 0), nil
+	}
+	return time.LoadLocation(timezone)
 }
 
 func main() {
 
-	config := &config{}
+	cliParams := &struct {
+		Mode        string `arg:"-m" help:"Available modes: runserver, adduser"`
+		Mongo       string `arg:"-d" help:"Mongodb url. Default 127.0.0.1:27017"`
+		Login       string `arg:"-l" help:"Mode adduser. Login for new user"`
+		Password    string `arg:"-p" help:"Mode adduser. Password for new user"`
+		JWTKey      string `arg:"-j" help:"JWT secret key."`
+		AllowOrigin string `arg:"-o" help:"Add Access-Control-Allow-Origin header with passed by param value"`
+		TZ          string `arg:"-t" help:"Timezone. Default UTC±00:00."`
+	}{}
 
 	////////////////////////////////////////
 	//
 	// DEFAULTS
-	config.Mode = "runserver"
-	config.Mongo = "127.0.0.1:27017"
+	cliParams.Mode = "runserver"
+	cliParams.Mongo = "127.0.0.1:27017"
+	cliParams.TZ = defaultTimezone
 	//
 	////////////////////////////////////////
 
-	arg.MustParse(config)
-	engine.Logger = log.New(os.Stdout, "speedlog ", log.LstdFlags|log.Lshortfile)
+	arg.MustParse(cliParams)
+	cLogger := log.New(os.Stdout, "speedlog ", log.LstdFlags|log.Lshortfile)
+	engine.Logger = cLogger
 
-	dbEngine, err := mongo.New("speedlog", config.Mongo)
+	dbEngine, err := mongo.New("speedlog", cliParams.Mongo)
 	defer dbEngine.Session.Close()
 
 	if err != nil {
-		engine.Logger.Fatalf("failed to initialize mongo: %v", err)
+		cLogger.Fatalf("[error] failed to initialize mongo: %v", err)
 		return
 	}
 
-	env := engine.NewEnv(dbEngine, config.JWTKey)
-	if len(config.AllowOrigin) > 0 {
-		env.AllowOrigin = config.AllowOrigin
+	location, err := parseTZ(cliParams.TZ)
+	if err != nil {
+		cLogger.Fatalf("[error] failed to parse timezone: %v", err)
 	}
-	switch config.Mode {
+
+	env := engine.NewEnv(dbEngine, cliParams.JWTKey, location)
+	if len(cliParams.AllowOrigin) > 0 {
+		env.AllowOrigin = cliParams.AllowOrigin
+	}
+	switch cliParams.Mode {
 	case "runserver":
 
-		if len(config.JWTKey) == 0 {
+		if len(cliParams.JWTKey) == 0 {
 			engine.Logger.Printf("[error] cannot start server. Required jwtkey")
 			return
 		}
 
 		r := mux.NewRouter()
 
-		graphite := plugins.NewGraphite("1")
+		graphite := plugins.NewGraphite("1", location)
 		graphite.Load(dbEngine)
 
 		env.ExportEventRoutes(r)
@@ -73,7 +88,7 @@ func main() {
 		}
 		log.Fatal(srv.ListenAndServe())
 	case "adduser":
-		err := env.DBEngine.AddUser(config.Login, config.Password)
+		err := env.DBEngine.AddUser(cliParams.Login, cliParams.Password)
 		if err != nil {
 			log.Fatal(err)
 		}

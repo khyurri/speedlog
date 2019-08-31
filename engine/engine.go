@@ -4,6 +4,7 @@ import (
 	"github.com/go-chi/jwtauth"
 	"github.com/gorilla/mux"
 	"github.com/khyurri/speedlog/engine/mongo"
+	"time"
 )
 
 type AppEnvironment interface {
@@ -17,14 +18,16 @@ type Env struct {
 	DBEngine    mongo.DataStore
 	SigningKey  *jwtauth.JWTAuth
 	AllowOrigin string
+	Location    *time.Location
 }
 
 // NewEnv - create new env struct
-func NewEnv(dbEngine mongo.DataStore, signingKey string) *Env {
+func NewEnv(dbEngine mongo.DataStore, signingKey string, location *time.Location) *Env {
 	k := jwtauth.New("HS256", []byte(signingKey), nil)
 	return &Env{
 		DBEngine:   dbEngine,
 		SigningKey: k,
+		Location:   location,
 	}
 }
 
