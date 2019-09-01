@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"github.com/globalsign/mgo/bson"
 	"github.com/montanaflynn/stats"
-	"sort"
 	"time"
 )
 
@@ -26,7 +25,8 @@ type AllEvents struct {
 
 // AggregatedEvent - aggregated mongo event document
 type AggregatedEvent struct {
-	Event
+	MetricName       string        `bson:"metricName"`
+	ProjectId        bson.ObjectId `bson:"projectId"`
 	MinDurationMs    float64
 	MaxDurationMs    float64
 	MedianDurationMs float64
@@ -35,8 +35,7 @@ type AggregatedEvent struct {
 	durationsMs      []float64
 }
 
-func (mg *Mongo) SaveEvent(metricName, project string, durationMs float64) (err error) {
-
+func (mg *Mongo) saveEventAtTime(metricName, project string, durationMs float64, eventTime time.Time) (err error) {
 	sess := mg.Clone()
 	defer sess.Close()
 
@@ -56,9 +55,13 @@ func (mg *Mongo) SaveEvent(metricName, project string, durationMs float64) (err 
 		metricName,
 		projectId,
 		durationMs,
-		time.Now(),
+		eventTime,
 	})
 	return
+}
+
+func (mg *Mongo) SaveEvent(metricName, project string, durationMs float64) (err error) {
+	return mg.saveEventAtTime(metricName, project, durationMs, time.Now())
 }
 
 func (mg *Mongo) FilterEvents(from, to time.Time, metricName, project string) (events []Event, err error) {
@@ -146,7 +149,7 @@ func GroupBy(group string, events []Event) (result []*AggregatedEvent, err error
 		return result, fmt.Errorf("unsupported group key %s", group)
 	}
 	result = mapEvent(events, m[group])
-	ordered(result)
+	//ordered(result)
 	return
 }
 
@@ -183,11 +186,8 @@ func mapEvent(event []Event, keyFunc keyFunc) (result []*AggregatedEvent) {
 		key := keyFunc(e.MetricTime)
 		if nil == m[key] {
 			m[key] = &AggregatedEvent{
-				Event: Event{
-					MetricName: e.MetricName,
-					MetricTime: key,
-					ProjectId:  e.ProjectId,
-				},
+				MetricName: e.MetricName,
+				ProjectId:  e.ProjectId,
 			}
 		}
 
@@ -210,8 +210,8 @@ func collapse(src *AggregatedEvent) {
 	src.EventCount = len(src.durationsMs)
 }
 
-func ordered(srcs []*AggregatedEvent) {
-	sort.Slice(srcs, func(i, j int) bool {
-		return srcs[i].MetricTime.Before(srcs[j].MetricTime)
-	})
-}
+//func ordered(srcs []*AggregatedEvent) {
+//	sort.Slice(srcs, func(i, j int) bool {
+//		return srcs[i].MetricTime.Before(srcs[j].MetricTime)
+//	})
+//}

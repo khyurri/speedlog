@@ -29,7 +29,7 @@ func (env *Env) saveEventHttp() http.HandlerFunc {
 			Logger.Printf("[debug] request body: %s", r.Body)
 			return
 		}
-		Logger.Printf("[debug] metricName: %s, durationMs: %f",
+		Logger.Printf("[debug] metricName: %s, durationMs: %f\n",
 			target.MetricName, target.DurationMs)
 		if len(target.MetricName) == 0 {
 			return errors.New("empty metricName")
@@ -61,7 +61,7 @@ func (env *Env) saveEventHttp() http.HandlerFunc {
 			response.JsonBody, err = json.Marshal(saved)
 		}
 		if err != nil {
-			Logger.Printf("[error] %s", err)
+			Logger.Printf("[error] %s\n", err)
 			response.Status = StatusIntErr
 			return
 		}

@@ -36,7 +36,7 @@ func (suite *EventsTestSuit) SetupTest() {
 				}{
 					metric,
 					r.Float64(),
-					"pravoved.ru", // todo: change name
+					"testProject", // todo: change name
 				})
 		}
 	}
@@ -48,8 +48,9 @@ func (suite *EventsTestSuit) TestStoreEvents() {
 	login, password := "admin10", "superpassword"
 
 	router := mux.NewRouter()
+	loc, _ := time.LoadLocation("Europe/Moscow")
 	dbEngine, _ := mongo.New("speedlog", "127.0.0.1:27017")
-	env := NewEnv(dbEngine, "1")
+	env := NewEnv(dbEngine, "1", loc)
 	env.ExportEventRoutes(router)
 	env.ExportUserRoutes(router)
 

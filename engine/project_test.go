@@ -12,6 +12,7 @@ import (
 	"net/http/httptest"
 	"os"
 	"testing"
+	"time"
 )
 
 type ProjectTestSuite struct {
@@ -53,9 +54,9 @@ func (suite *ProjectTestSuite) TestCreateProjectHTTP() {
 		err = dbEngine.DelProject(projId)
 		assert.Nil(suite.T(), err)
 	}()
-
+	loc, _ := time.LoadLocation("Europe/Moscow")
 	router := mux.NewRouter()
-	env := NewEnv(dbEngine, "1")
+	env := NewEnv(dbEngine, "1", loc)
 	env.ExportProjectRoutes(router)
 	env.ExportUserRoutes(router)
 
