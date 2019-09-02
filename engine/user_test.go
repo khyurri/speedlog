@@ -12,6 +12,7 @@ import (
 	"net/http/httptest"
 	"os"
 	"testing"
+	"time"
 )
 
 type UserTestSuit struct {
@@ -27,7 +28,8 @@ func (suite *UserTestSuit) TestAddUser() {
 	login, password := "admin9", "hello"
 
 	dbEngine, _ := mongo.New("speedlog", "127.0.0.1:27017")
-	env := NewEnv(dbEngine, "1")
+	loc, _ := time.LoadLocation("Europe/Moscow")
+	env := NewEnv(dbEngine, "1", loc)
 	err := env.AddUser(login, password)
 	assert.Nil(suite.T(), err)
 

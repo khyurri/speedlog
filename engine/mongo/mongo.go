@@ -20,7 +20,8 @@ const (
 )
 
 type DataStore interface {
-	FilterEvents(from, to time.Time, metricName, project string) (events []*Event, err error)
+	FilterEvents(from, to time.Time, metricName, project string) (events []Event, err error)
+	AllEvents(from, to time.Time) (events []AllEvents, err error)
 	SaveEvent(metricName, project string, durationMs float64) (err error)
 
 	AddUser(login string, password string) (err error)
@@ -28,8 +29,9 @@ type DataStore interface {
 	UserDel(uid string) error
 
 	AddProject(title string) error
-	GetProject(title string) (projectId string, err error)
+	GetProject(title string) (project Project, err error)
 	DelProject(id string) (err error)
+	GetProjectById(id string) Project
 }
 
 type Mongo struct {
@@ -41,6 +43,7 @@ func New(db string, url string) (engine *Mongo, err error) {
 	logger = log.New(os.Stdout, "speedlog mongodb ", log.LstdFlags|log.Lshortfile)
 	engine = &Mongo{DbName: db}
 	engine.Session, err = mgo.Dial(url)
+	mgo.SetLogger(logger)
 	if err != nil {
 		return
 	}
