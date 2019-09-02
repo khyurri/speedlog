@@ -14,7 +14,7 @@ var (
 )
 
 const (
-	userCollection    = "user"
+	userCollection    = "User"
 	projectCollection = "project"
 	eventCollection   = "event"
 )
@@ -25,13 +25,13 @@ type DataStore interface {
 	SaveEvent(metricName, project string, durationMs float64) (err error)
 
 	AddUser(login string, password string) (err error)
-	GetUser(login string) (*user, error)
+	GetUser(login string) (*User, error)
 	UserDel(uid string) error
 
 	AddProject(title string) error
 	GetProject(title string) (project Project, err error)
+	GetProjectById(id string) (project Project, err error)
 	DelProject(id string) (err error)
-	GetProjectById(id string) Project
 }
 
 type Mongo struct {
@@ -43,7 +43,7 @@ func New(db string, url string) (engine *Mongo, err error) {
 	logger = log.New(os.Stdout, "speedlog mongodb ", log.LstdFlags|log.Lshortfile)
 	engine = &Mongo{DbName: db}
 	engine.Session, err = mgo.Dial(url)
-	mgo.SetLogger(logger)
+	//mgo.SetLogger(logger)
 	if err != nil {
 		return
 	}
@@ -71,14 +71,14 @@ func (mg *Mongo) CreateIndexes() (err error) {
 	once.Do(func() {
 		logger.Printf("[debug] index check")
 
-		logger.Printf("[debug] collection `user`")
+		logger.Printf("[debug] collection `User`")
 		coll := mg.Collection(userCollection, nil)
 		err = coll.EnsureIndex(mgo.Index{
 			Key:    []string{"login"},
 			Unique: true,
 		})
 		if err != nil {
-			logger.Printf("[error] cannot create index `user`: %s", err)
+			logger.Printf("[error] cannot create index `User`: %s", err)
 		}
 
 		logger.Printf("[debug] collection `project`")

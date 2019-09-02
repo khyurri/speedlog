@@ -18,7 +18,7 @@ func NewGraphite(host string, location *time.Location) *graphite {
 }
 
 func gPath(project, event, metric string) string {
-	return fmt.Sprintf("speedlog.tests.%s.%s.%s", project, event, metric)
+	return fmt.Sprintf("speedlog.%s.%s.%s", project, event, metric)
 }
 
 func (gr *graphite) Load(dbEngine mongo.DataStore) {
@@ -51,13 +51,16 @@ func (gr *graphite) Load(dbEngine mongo.DataStore) {
 
 				for _, event := range aggregatedEvents {
 					name := event.MetricName
-					// TODO: fix it
-					fmt.Println(group.Meta.ProjectId)
-					proj := dbEngine.GetProjectById(group.Meta.ProjectId).Title
+					proj, err := dbEngine.GetProjectById(group.Meta.ProjectId)
+					if err != nil {
+						fmt.Printf("[error] project `%s` not found: %v", group.Meta.ProjectId, err)
+						continue
+					}
+					projId := proj.ID.Hex()
 					sendMap := map[string]interface{}{
-						gPath(proj, name, "median"): event.MedianDurationMs,
-						gPath(proj, name, "max"):    event.MaxDurationMs,
-						gPath(proj, name, "min"):    event.MinDurationMs,
+						gPath(projId, name, "median"): event.MedianDurationMs,
+						gPath(projId, name, "max"):    event.MaxDurationMs,
+						gPath(projId, name, "min"):    event.MinDurationMs,
 					}
 					sendDataToGraphite(gr.host, sendMap)
 					fmt.Printf("[debug] sended")

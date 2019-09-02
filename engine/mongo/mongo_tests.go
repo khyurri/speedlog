@@ -60,7 +60,7 @@ func populateDb(t testing.TB, mongo *Mongo, fixtureName string) {
 			durationMs := event.DurationMs
 			ts, err := time.Parse(testTimeLayout, event.MetricTime)
 			ok(t, err)
-			err = mongo.saveEventAtTime(metricName, project.Title, durationMs, ts)
+			ok(t, mongo.saveEventAtTime(metricName, project.Title, durationMs, ts))
 		}
 
 	}

@@ -6,7 +6,7 @@ import (
 	"golang.org/x/crypto/bcrypt"
 )
 
-type user struct {
+type User struct {
 	Id       bson.ObjectId `bson:"_id,omitempty"`
 	Login    string
 	Password string
@@ -27,7 +27,7 @@ func (mg *Mongo) AddUser(login string, password string) (err error) {
 	if err != nil {
 		return
 	}
-	u := &user{Login: login, Password: hashedPassword}
+	u := &User{Login: login, Password: hashedPassword}
 	if len(u.Login) == 0 || len(u.Password) == 0 {
 		err = errors.New("login or password cannot be empty")
 		return
@@ -36,12 +36,12 @@ func (mg *Mongo) AddUser(login string, password string) (err error) {
 	return
 }
 
-// GetUser - returns user by login
-func (mg *Mongo) GetUser(login string) (*user, error) {
+// GetUser - returns User by login
+func (mg *Mongo) GetUser(login string) (*User, error) {
 
 	sess := mg.Clone()
 	defer sess.Close()
-	var u *user
+	var u *User
 
 	err := mg.Collection(userCollection, sess).Find(bson.M{
 		"login": login,
@@ -49,7 +49,7 @@ func (mg *Mongo) GetUser(login string) (*user, error) {
 	return u, err
 }
 
-// UserDel - delete user by uid (mongodb field _id)
+// UserDel - delete User by uid (mongodb field _id)
 func (mg *Mongo) UserDel(uid string) error {
 
 	sess := mg.Clone()

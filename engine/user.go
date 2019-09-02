@@ -3,7 +3,6 @@ package engine
 import (
 	"encoding/json"
 	"errors"
-	"fmt"
 	"github.com/dgrijalva/jwt-go"
 	"golang.org/x/crypto/bcrypt"
 	"net/http"
@@ -45,18 +44,24 @@ func (env *Env) authenticateHttp() http.HandlerFunc {
 
 		if r.Body == nil {
 			_r, _ := json.Marshal(r)
-			fmt.Println(_r)
-			Logger.Printf("[info] request body is nil. Request: %s", _r)
-			invalidAuthRequest(response)
+			env.Logger.Printf("[error] request body is nil. Request: %s", _r)
+			response.Status = StatusErr
 			return
 		}
 		decoder := json.NewDecoder(r.Body)
 		u := &request{}
 		err := decoder.Decode(&u)
 		if err != nil {
-			invalidAuthRequest(response)
+			env.Logger.Printf("[error] invalid login request: %v", err)
+			response.Status = StatusIntErr
 			return
 		}
+
+		if len(u.Login) == 0 || len(u.Password) == 0 {
+			response.Status = StatusErr
+			return
+		}
+
 		err = env.Authenticate(u.Login, u.Password)
 		if err != nil {
 			invalidAuthRequest(response)
@@ -65,7 +70,7 @@ func (env *Env) authenticateHttp() http.HandlerFunc {
 
 		// GENERATE TOKEN //
 		_, tokenString, err := env.SigningKey.Encode(
-			jwt.MapClaims{"source": "rest", "issuer": "hello"})
+			jwt.MapClaims{"source": "rest", "issuer": u.Login})
 
 		if err != nil {
 			invalidAuthRequest(response)

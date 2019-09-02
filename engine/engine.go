@@ -4,6 +4,7 @@ import (
 	"github.com/go-chi/jwtauth"
 	"github.com/gorilla/mux"
 	"github.com/khyurri/speedlog/engine/mongo"
+	"log"
 	"time"
 )
 
@@ -19,6 +20,7 @@ type Env struct {
 	SigningKey  *jwtauth.JWTAuth
 	AllowOrigin string
 	Location    *time.Location
+	Logger      *log.Logger
 }
 
 // NewEnv - create new env struct
@@ -39,14 +41,14 @@ func (env *Env) ExportUserRoutes(router *mux.Router) {
 
 func (env *Env) ExportProjectRoutes(router *mux.Router) {
 	private := router.PathPrefix("/private/").Subrouter()
-	private.HandleFunc("/project/", env.addProjectHttp()).
+	private.HandleFunc("/project/", env.createProjectHttp()).
 		Methods("PUT", "OPTIONS")
 	router.Use(env.corsMiddleware)
 	private.Use(env.JWTMiddleware)
 }
 
 func (env *Env) ExportEventRoutes(router *mux.Router) {
-	router.HandleFunc("/event/", env.saveEventHttp()).
+	router.HandleFunc("/event/", env.createEventHttp()).
 		Methods("PUT", "POST", "OPTIONS")
 
 	private := router.PathPrefix("/private/").Subrouter()

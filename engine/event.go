@@ -13,7 +13,7 @@ const (
 	timeLayout = "2006-01-02T15:04"
 )
 
-func (env *Env) saveEventHttp() http.HandlerFunc {
+func (env *Env) createEventHttp() http.HandlerFunc {
 
 	type request struct {
 		MetricName string  `json:"metricName"`
@@ -25,11 +25,11 @@ func (env *Env) saveEventHttp() http.HandlerFunc {
 		dec := json.NewDecoder(r.Body)
 		err = dec.Decode(target)
 		if err != nil {
-			Logger.Printf("[error] deconding request error: %s", err)
-			Logger.Printf("[debug] request body: %s", r.Body)
+			env.Logger.Printf("[error] deconding request error: %s", err)
+			env.Logger.Printf("[debug] request body: %s", r.Body)
 			return
 		}
-		Logger.Printf("[debug] metricName: %s, durationMs: %f\n",
+		env.Logger.Printf("[debug] metricName: %s, durationMs: %f\n",
 			target.MetricName, target.DurationMs)
 		if len(target.MetricName) == 0 {
 			return errors.New("empty metricName")
@@ -46,25 +46,25 @@ func (env *Env) saveEventHttp() http.HandlerFunc {
 		err := mapRequestToStruct(r, req)
 
 		if err != nil {
-			Logger.Printf("[debug] internal error %s", err)
+			env.Logger.Printf("[debug] internal error %s", err)
 			response.Status = StatusIntErr
 			return
 		}
 
 		err = env.DBEngine.SaveEvent(req.MetricName, req.Project, req.DurationMs)
-		if err == nil {
-			Logger.Printf("[debug] requested params: %s", r.Body)
-			saved := struct {
-				Saved bool `json:"saved"`
-			}{true}
-			response.Status = StatusOk
-			response.JsonBody, err = json.Marshal(saved)
-		}
 		if err != nil {
-			Logger.Printf("[error] %s\n", err)
+			env.Logger.Printf("[error] %s\n", err)
 			response.Status = StatusIntErr
 			return
 		}
+
+		env.Logger.Printf("[debug] requested params: %s", r.Body)
+		saved := struct {
+			Saved bool `json:"saved"`
+		}{true}
+		response.Status = StatusOk
+		response.JsonBody, err = json.Marshal(saved)
+
 	}
 
 }
@@ -81,19 +81,19 @@ func (env *Env) getEventsHttp() http.HandlerFunc {
 
 		metricTimeFrom, err := time.Parse(timeLayout, params["metricTimeFrom"])
 		if err != nil {
-			Logger.Printf("[error] %s", err)
+			env.Logger.Printf("[error] %s", err)
 		}
 
 		metricTimeTo, err := time.Parse(timeLayout, params["metricTimeTo"])
 		if err != nil {
-			Logger.Printf("[error] %s", err)
+			env.Logger.Printf("[error] %s", err)
 		}
 
 		if err != nil {
 			response.Status = StatusErr
 		}
 
-		Logger.Printf("[debug] %s -> %s", metricTimeFrom, metricTimeTo)
+		env.Logger.Printf("[debug] %s -> %s", metricTimeFrom, metricTimeTo)
 		events, err := env.DBEngine.FilterEvents(
 			metricTimeFrom,
 			metricTimeTo,

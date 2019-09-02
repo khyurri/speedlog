@@ -53,15 +53,15 @@ func (mg *Mongo) DelProject(id string) (err error) {
 	return
 }
 
-func (mg *Mongo) GetProjectById(id string) Project {
+func (mg *Mongo) GetProjectById(id string) (project Project, err error) {
 	sess := mg.Clone()
 	defer sess.Close()
-	var project Project
-	err := mg.Collection(projectCollection, sess).Find(bson.M{
+
+	err = mg.Collection(projectCollection, sess).Find(bson.M{
 		"_id": bson.ObjectIdHex(id),
 	}).One(&project)
 	if err != nil {
 		fmt.Printf("[error] %v\n", err)
 	}
-	return project
+	return project, err
 }
