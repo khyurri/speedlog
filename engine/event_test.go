@@ -3,104 +3,138 @@ package engine
 import (
 	"bytes"
 	"encoding/json"
+	"fmt"
 	"github.com/gorilla/mux"
-	"github.com/khyurri/speedlog/engine/mongo"
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/suite"
-	"log"
-	"math/rand"
 	"net/http"
 	"net/http/httptest"
-	"os"
+	"net/url"
 	"testing"
-	"time"
 )
 
-type EventsTestSuit struct {
-	suite.Suite
-	testEvents []interface{}
+type trEventSave struct {
+	MetricName string  `json:"metricName"`
+	DurationMs float64 `json:"durationMs"`
+	Project    string  `json:"project"`
+	ExpCode    int     // Expected http code
 }
 
-func (suite *EventsTestSuit) SetupTest() {
+type trEventGet struct {
+	MetricName     string
+	Project        string
+	MetricTimeFrom string // valid format ...
+	MetricTimeTo   string
+	GroupBy        string
+	Login          string
+	Password       string
+	ExpCode        int // Expected http code
+}
 
-	Logger = log.New(os.Stdout, "speedlog ", log.LstdFlags|log.Lshortfile)
+func TestCreateEventHttp(t *testing.T) {
 
-	r := rand.New(rand.NewSource(time.Now().UnixNano()))
-	for _, metric := range []string{"backendResponse", "frontendResponse"} {
-		for i := 0; i < 2; i++ {
-			suite.testEvents = append(suite.testEvents,
-				struct {
-					MetricName string  `json:"metricName"`
-					DurationMs float64 `json:"durationMs"`
-					Project    string  `json:"project"`
-				}{
-					metric,
-					r.Float64(),
-					"testProject", // todo: change name
-				})
-		}
+	testRounds := []trEventSave{
+		{
+			ExpCode:    200,
+			MetricName: "testMetric",
+			DurationMs: 0.1,
+			Project:    "testProject",
+		},
+		{
+			ExpCode:    500,
+			MetricName: failMetricName,
+			DurationMs: 0.1,
+			Project:    "testProject",
+		},
 	}
 
-}
-
-func (suite *EventsTestSuit) TestStoreEvents() {
-	// TODO: MOCK IT!
-	login, password := "admin10", "superpassword"
-
+	env := NewTestEnv(t)
 	router := mux.NewRouter()
-	loc, _ := time.LoadLocation("Europe/Moscow")
-	dbEngine, _ := mongo.New("speedlog", "127.0.0.1:27017")
-	env := NewEnv(dbEngine, "1", loc)
 	env.ExportEventRoutes(router)
-	env.ExportUserRoutes(router)
 
-	for _, event := range suite.testEvents {
-		jsonStr, _ := json.Marshal(event)
-		r, _ := http.NewRequest("PUT", "/event/", bytes.NewBuffer(jsonStr))
+	for round, event := range testRounds {
+		jsonStr, err := json.Marshal(event)
+		ok(t, err)
+
+		r, err := http.NewRequest("PUT", "/event/", bytes.NewBuffer(jsonStr))
+		ok(t, err)
+
 		r.Header.Set("Content-Type", "application/json")
 		w := httptest.NewRecorder()
 		router.ServeHTTP(w, r)
-		suite.Equal(200, w.Code)
-	}
-
-	// login
-	err := dbEngine.AddUser(login, password)
-	defer func() {
-		// delete user
-		userId, err := dbEngine.GetUser(login)
-		assert.Nil(suite.T(), err)
-		err = dbEngine.UserDel(userId.Id.Hex())
-		assert.Nil(suite.T(), err)
-	}()
-
-	jsonStr, _ := json.Marshal(struct {
-		Login    string `json:"login"`
-		Password string `json:"password"`
-	}{login, password})
-
-	r, _ := http.NewRequest("POST", "/login/", bytes.NewBuffer(jsonStr))
-	r.Header.Set("Content-Type", "application/json")
-	w := httptest.NewRecorder()
-	router.ServeHTTP(w, r)
-	resp := &struct {
-		Token string `json:"token"`
-	}{}
-	suite.T().Log(w.Body)
-	err = json.Unmarshal(w.Body.Bytes(), resp)
-	assert.Nil(suite.T(), err)
-	assert.Greater(suite.T(), len(resp.Token), 0)
-
-	if false {
-		r, _ = http.NewRequest("GET", "/private/events/?metricName=backendResponse&metricTimeFrom=2019-08-20T01:10&metricTimeTo=2019-08-25T00:00&groupBy=minutes&project=pravoved.ru", nil)
-		r.Header.Set("Content-Type", "application/json")
-		r.Header.Set("Authorization", "Bearer "+resp.Token)
-		w = httptest.NewRecorder()
-		router.ServeHTTP(w, r)
-		suite.Equal(200, w.Code)
-		suite.Greater(len(w.Body.String()), 0)
+		assert(t, event.ExpCode == w.Code, fmt.Sprintf("wrong code `%d` at round %d", w.Code, round))
 	}
 }
 
-func TestEvent(t *testing.T) {
-	suite.Run(t, new(EventsTestSuit))
+func TestGetEventsHttp(t *testing.T) {
+	testRounds := []trEventGet{
+		{
+			// Empty request
+			ExpCode: 404,
+		},
+		{
+			// not authorized
+			ExpCode:        403,
+			MetricName:     "metricName",
+			Project:        "someProject",
+			MetricTimeFrom: "2019-09-02 00:01:00",
+			MetricTimeTo:   "2019-09-02 00:02:00",
+			GroupBy:        "minutes",
+		},
+		{
+			// valid request with authorization
+			ExpCode:        200,
+			Login:          validLogin,
+			MetricName:     "metricName",
+			Project:        "someProject",
+			MetricTimeFrom: "2019-09-02 00:01:00",
+			MetricTimeTo:   "2019-09-02 00:02:00",
+			GroupBy:        "minutes",
+		},
+	}
+
+	env := NewTestEnv(t)
+	router := mux.NewRouter()
+	env.ExportEventRoutes(router)
+
+	// todo: check options
+
+	// check get
+	for round, event := range testRounds {
+		u, err := url.Parse("/private/events/")
+		ok(t, err)
+
+		v := url.Values{}
+		if len(event.MetricName) > 0 {
+			v.Add("metricName", event.MetricName)
+		}
+		if len(event.Project) > 0 {
+			v.Add("project", event.Project)
+		}
+		if len(event.GroupBy) > 0 {
+			v.Add("groupBy", event.GroupBy)
+		}
+		if len(event.MetricTimeFrom) > 0 {
+			v.Add("metricTimeFrom", event.MetricTimeFrom)
+		}
+		if len(event.MetricTimeTo) > 0 {
+			v.Add("metricTimeTo", event.MetricTimeTo)
+		}
+
+		u.RawQuery = v.Encode()
+		r, err := http.NewRequest("GET", u.String(), nil)
+		ok(t, err)
+
+		// authorize
+		if len(event.Login) > 0 {
+			token := getToken(t, env, event.Login)
+			r.Header.Set("Authorization", "Bearer "+token)
+		}
+
+		r.Header.Set("Content-Type", "application/json")
+		w := httptest.NewRecorder()
+		router.ServeHTTP(w, r)
+
+		assert(t, event.ExpCode == w.Code,
+			fmt.Sprintf("wrong code `%d` at round %d.\nurl: %s\n", w.Code, round, u.String()))
+	}
+
 }

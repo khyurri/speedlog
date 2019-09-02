@@ -3,78 +3,63 @@ package engine
 import (
 	"bytes"
 	"encoding/json"
+	"fmt"
 	"github.com/gorilla/mux"
-	"github.com/khyurri/speedlog/engine/mongo"
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/suite"
-	"log"
 	"net/http"
 	"net/http/httptest"
-	"os"
 	"testing"
-	"time"
 )
 
-type UserTestSuit struct {
-	suite.Suite
+type trUserLogin struct {
+	ExpCode  int
+	Login    string
+	Password string
 }
 
-func (suite *UserTestSuit) SetupTest() {
-	Logger = log.New(os.Stdout, "speedlog ", log.LstdFlags|log.Lshortfile)
-}
+func TestLogin(t *testing.T) {
 
-func (suite *UserTestSuit) TestAddUser() {
+	testRounds := []trUserLogin{
+		{
+			// empty request
+			ExpCode: 400,
+		},
+		{
+			ExpCode:  200,
+			Login:    validLogin,
+			Password: validPassword,
+		},
+		{
+			ExpCode:  403,
+			Login:    validLogin,
+			Password: "invalidPassword",
+		},
+		{
+			ExpCode:  403,
+			Login:    "invalidLogin",
+			Password: validPassword,
+		},
+		{
+			ExpCode:  403,
+			Login:    "invalidLogin",
+			Password: "invalidPassword",
+		},
+	}
 
-	login, password := "admin9", "hello"
-
-	dbEngine, _ := mongo.New("speedlog", "127.0.0.1:27017")
-	loc, _ := time.LoadLocation("Europe/Moscow")
-	env := NewEnv(dbEngine, "1", loc)
-	err := env.AddUser(login, password)
-	assert.Nil(suite.T(), err)
-
-	// check user exists
-	user, err := env.DBEngine.GetUser(login)
-	assert.Nil(suite.T(), err)
-	assert.NotNil(suite.T(), user.Id)
-
-	// check auth
+	env := NewTestEnv(t)
 	router := mux.NewRouter()
 	env.ExportUserRoutes(router)
 
-	jsonStr, _ := json.Marshal(struct {
-		Login    string `json:"login"`
-		Password string `json:"password"`
-	}{login, password})
+	for round, creds := range testRounds {
+		jsonStr, err := json.Marshal(creds)
+		ok(t, err)
+		r, err := http.NewRequest("POST", "/login/", bytes.NewBuffer(jsonStr))
+		ok(t, err)
 
-	r, _ := http.NewRequest("POST", "/login/", bytes.NewBuffer(jsonStr))
-	r.Header.Set("Content-Type", "application/json")
-	w := httptest.NewRecorder()
-	router.ServeHTTP(w, r)
-	resp := &struct {
-		Token string `json:"token"`
-	}{}
-	err = json.Unmarshal(w.Body.Bytes(), resp)
-	assert.Nil(suite.T(), err)
-	assert.Greater(suite.T(), len(resp.Token), 0)
+		r.Header.Set("Content-Type", "application/json")
+		w := httptest.NewRecorder()
+		router.ServeHTTP(w, r)
 
-	// check wrong password
-	jsonStr, _ = json.Marshal(struct {
-		Login    string `json:"login"`
-		Password string `json:"password"`
-	}{login, "***"})
+		assert(t, creds.ExpCode == w.Code, fmt.Sprintf("wrong code `%d` at round %d", w.Code, round))
+	}
 
-	r, _ = http.NewRequest("POST", "/login/", bytes.NewBuffer(jsonStr))
-	r.Header.Set("Content-Type", "application/json")
-	w = httptest.NewRecorder()
-	router.ServeHTTP(w, r)
-	assert.Equal(suite.T(), 403, w.Code)
-
-	// del user
-	err = env.DBEngine.UserDel(user.Id.Hex())
-	assert.Nil(suite.T(), err)
-}
-
-func TestUser(t *testing.T) {
-	suite.Run(t, new(UserTestSuit))
 }
