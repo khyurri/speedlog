@@ -1,6 +1,7 @@
 package mongo
 
 import (
+	"fmt"
 	"github.com/globalsign/mgo/bson"
 )
 
@@ -9,17 +10,14 @@ type Project struct {
 	Title string        `bson:"title"`
 }
 
-func (mg *Mongo) GetProject(title string) (projectId string, err error) {
+func (mg *Mongo) GetProject(title string) (project Project, err error) {
 
 	sess := mg.Clone()
 	defer sess.Close()
 
-	t := Project{}
-	err = mg.Collection(projectCollection, sess).Find(bson.M{"title": title}).One(&t)
+	err = mg.Collection(projectCollection, sess).Find(bson.M{"title": title}).One(&project)
 	if err != nil {
 		return
-	} else {
-		projectId = t.ID.Hex()
 	}
 	return
 }
@@ -53,4 +51,17 @@ func (mg *Mongo) DelProject(id string) (err error) {
 	}
 
 	return
+}
+
+func (mg *Mongo) GetProjectById(id string) Project {
+	sess := mg.Clone()
+	defer sess.Close()
+	var project Project
+	err := mg.Collection(projectCollection, sess).Find(bson.M{
+		"_id": bson.ObjectIdHex(id),
+	}).One(&project)
+	if err != nil {
+		fmt.Printf("[error] %v\n", err)
+	}
+	return project
 }

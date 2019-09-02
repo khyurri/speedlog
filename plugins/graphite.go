@@ -17,12 +17,17 @@ func NewGraphite(host string, location *time.Location) *graphite {
 	return &graphite{host: host, location: location}
 }
 
+func gPath(project, event, metric string) string {
+	return fmt.Sprintf("speedlog.tests.%s.%s.%s", project, event, metric)
+}
+
 func (gr *graphite) Load(dbEngine mongo.DataStore) {
 	interval := 1 * time.Minute
 	rng := 1 * time.Minute
-
+	fmt.Println("[debug] graphite module loaded")
 	gr.ticker = time.NewTicker(interval)
 	go func() {
+		fmt.Println("[debug] graphite module started")
 		var dateFrom, dateTo time.Time
 		now := time.Now()
 		// Each circle dateFrom takes the value of dateTo, and dateTo increases by rng
@@ -39,19 +44,25 @@ func (gr *graphite) Load(dbEngine mongo.DataStore) {
 			}
 
 			fmt.Printf("[debug] Fetching from: %s, to: %s\n", dateFrom, dateTo)
+			fmt.Println(len(events))
 
 			for _, group := range events {
-				aggregated, _ := mongo.GroupBy("minutes", group.Events)
+				aggregatedEvents, _ := mongo.GroupBy("minutes", group.Events)
 
-				sendMap := map[string]interface{}{
-					aggregated[0].Event.MetricName + ".median": aggregated[0].MedianDurationMs,
-					aggregated[0].Event.MetricName + ".max":    aggregated[0].MaxDurationMs,
-					aggregated[0].Event.MetricName + ".min":    aggregated[0].MinDurationMs,
+				for _, event := range aggregatedEvents {
+					name := event.MetricName
+					// TODO: fix it
+					fmt.Println(group.Meta.ProjectId)
+					proj := dbEngine.GetProjectById(group.Meta.ProjectId).Title
+					sendMap := map[string]interface{}{
+						gPath(proj, name, "median"): event.MedianDurationMs,
+						gPath(proj, name, "max"):    event.MaxDurationMs,
+						gPath(proj, name, "min"):    event.MinDurationMs,
+					}
+					sendDataToGraphite(gr.host, sendMap)
+					fmt.Printf("[debug] sended")
 				}
-				sendDataToGraphite("localhost:2003", sendMap)
-				fmt.Printf("[debug] sended")
 			}
-			// take the value of dateTo
 			dateFrom = dateTo
 		}
 	}()

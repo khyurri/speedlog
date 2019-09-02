@@ -29,8 +29,9 @@ type DataStore interface {
 	UserDel(uid string) error
 
 	AddProject(title string) error
-	GetProject(title string) (projectId string, err error)
+	GetProject(title string) (project Project, err error)
 	DelProject(id string) (err error)
+	GetProjectById(id string) Project
 }
 
 type Mongo struct {

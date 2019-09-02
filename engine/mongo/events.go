@@ -35,16 +35,18 @@ type AggregatedEvent struct {
 	durationsMs      []float64
 }
 
-func (mg *Mongo) saveEventAtTime(metricName, project string, durationMs float64, eventTime time.Time) (err error) {
+func (mg *Mongo) saveEventAtTime(metricName, projectTitle string, durationMs float64, eventTime time.Time) (err error) {
 	sess := mg.Clone()
 	defer sess.Close()
 
-	projectId, err := mg.GetProject(project)
+	project, err := mg.GetProject(projectTitle)
 
 	if err != nil {
-		fmt.Printf("[error] fetch project by name: %s", err)
+		fmt.Printf("[error] fetch project by name: %s", projectTitle)
 		return
 	}
+
+	projectId := project.ID.Hex()
 
 	err = mg.Collection(eventCollection, sess).Insert(struct {
 		MetricName string    `bson:"metricName"`
@@ -64,17 +66,19 @@ func (mg *Mongo) SaveEvent(metricName, project string, durationMs float64) (err 
 	return mg.saveEventAtTime(metricName, project, durationMs, time.Now())
 }
 
-func (mg *Mongo) FilterEvents(from, to time.Time, metricName, project string) (events []Event, err error) {
+func (mg *Mongo) FilterEvents(from, to time.Time, metricName, projectTitle string) (events []Event, err error) {
 
 	sess := mg.Clone()
 	defer sess.Close()
 
-	projectId, err := mg.GetProject(project)
+	project, err := mg.GetProject(projectTitle)
 
 	if err != nil {
 		fmt.Printf("[error] fetch project by name: %s", err)
 		return
 	}
+
+	projectId := project.ID.Hex()
 
 	events = make([]Event, 0)
 	err = mg.Collection(eventCollection, sess).

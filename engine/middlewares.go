@@ -22,7 +22,6 @@ func (env *Env) JWTMiddleware(next http.Handler) http.Handler {
 func (env *Env) corsMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if len(env.AllowOrigin) > 0 {
-			Logger.Printf("[debug] Access-Control-Allow-Origin: %s", env.AllowOrigin)
 			w.Header().Set("Access-Control-Allow-Origin", env.AllowOrigin)
 		}
 		switch r.Method {

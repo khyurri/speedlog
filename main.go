@@ -31,6 +31,7 @@ func main() {
 		JWTKey      string `arg:"-j" help:"JWT secret key."`
 		AllowOrigin string `arg:"-o" help:"Add Access-Control-Allow-Origin header with passed by param value"`
 		TZ          string `arg:"-t" help:"Timezone. Default UTC±00:00."`
+		Graphite    string `arg:"-g" help:"Graphite host:port"`
 	}{}
 
 	////////////////////////////////////////
@@ -71,11 +72,12 @@ func main() {
 			return
 		}
 
+		if len(cliParams.Graphite) > 0 {
+			graphite := plugins.NewGraphite(cliParams.Graphite, location)
+			graphite.Load(dbEngine)
+		}
+
 		r := mux.NewRouter()
-
-		graphite := plugins.NewGraphite("1", location)
-		graphite.Load(dbEngine)
-
 		env.ExportEventRoutes(r)
 		env.ExportUserRoutes(r)
 		env.ExportProjectRoutes(r)

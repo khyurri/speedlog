@@ -24,13 +24,14 @@ func (suite *ProjectTestSuite) SetupTest() {
 }
 
 func (suite *ProjectTestSuite) TestCreateProject() {
-	project := "test_project"
+	projectTitle := "test_project"
 	dbEngine, _ := mongo.New("speedlog", "127.0.0.1:27017")
-	err := dbEngine.AddProject(project)
+	err := dbEngine.AddProject(projectTitle)
 	assert.Nil(suite.T(), err)
 
-	projectId, err := dbEngine.GetProject(project)
+	project, err := dbEngine.GetProject(projectTitle)
 	assert.Nil(suite.T(), err)
+	projectId := project.ID.Hex()
 	assert.Greater(suite.T(), len(projectId), 0)
 
 	err = dbEngine.DelProject(projectId)
@@ -38,7 +39,7 @@ func (suite *ProjectTestSuite) TestCreateProject() {
 }
 
 func (suite *ProjectTestSuite) TestCreateProjectHTTP() {
-	project := "test_http_project"
+	projectTitle := "test_http_project"
 	login, password := "admin10", "superpassword"
 	dbEngine, _ := mongo.New("speedlog", "127.0.0.1:27017")
 
@@ -49,9 +50,10 @@ func (suite *ProjectTestSuite) TestCreateProjectHTTP() {
 		err = dbEngine.UserDel(userId.Id.Hex())
 		assert.Nil(suite.T(), err)
 		// delete project
-		projId, err := dbEngine.GetProject(project)
+		project, err := dbEngine.GetProject(projectTitle)
 		assert.Nil(suite.T(), err)
-		err = dbEngine.DelProject(projId)
+		projectId := project.ID.Hex()
+		err = dbEngine.DelProject(projectId)
 		assert.Nil(suite.T(), err)
 	}()
 	loc, _ := time.LoadLocation("Europe/Moscow")
@@ -85,7 +87,7 @@ func (suite *ProjectTestSuite) TestCreateProjectHTTP() {
 
 	jsonStr, _ = json.Marshal(struct {
 		Title string `json:"title"`
-	}{project})
+	}{projectTitle})
 	r, _ = http.NewRequest("PUT", "/private/project/", bytes.NewBuffer(jsonStr))
 	r.Header.Set("Content-Type", "application/json")
 	r.Header.Set("Authorization", "Bearer "+resp.Token)
