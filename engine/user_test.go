@@ -45,7 +45,7 @@ func TestLogin(t *testing.T) {
 		},
 	}
 
-	env := NewTestEnv(t)
+	env := NewTestEnv(t, "*")
 	router := mux.NewRouter()
 	env.ExportUserRoutes(router)
 

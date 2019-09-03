@@ -45,7 +45,6 @@ func main() {
 
 	arg.MustParse(cliParams)
 	cLogger := log.New(os.Stdout, "speedlog ", log.LstdFlags|log.Lshortfile)
-	engine.Logger = cLogger
 
 	dbEngine, err := mongo.New("speedlog", cliParams.Mongo)
 	defer dbEngine.Session.Close()

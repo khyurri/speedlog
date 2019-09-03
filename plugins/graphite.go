@@ -56,11 +56,11 @@ func (gr *graphite) Load(dbEngine mongo.DataStore) {
 						fmt.Printf("[error] project `%s` not found: %v", group.Meta.ProjectId, err)
 						continue
 					}
-					projId := proj.ID.Hex()
+					projName := proj.Title
 					sendMap := map[string]interface{}{
-						gPath(projId, name, "median"): event.MedianDurationMs,
-						gPath(projId, name, "max"):    event.MaxDurationMs,
-						gPath(projId, name, "min"):    event.MinDurationMs,
+						gPath(projName, name, "median"): event.MedianDurationMs,
+						gPath(projName, name, "max"):    event.MaxDurationMs,
+						gPath(projName, name, "min"):    event.MinDurationMs,
 					}
 					sendDataToGraphite(gr.host, sendMap)
 					fmt.Printf("[debug] sended")

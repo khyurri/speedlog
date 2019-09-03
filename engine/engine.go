@@ -5,6 +5,7 @@ import (
 	"github.com/gorilla/mux"
 	"github.com/khyurri/speedlog/engine/mongo"
 	"log"
+	"os"
 	"time"
 )
 
@@ -30,6 +31,7 @@ func NewEnv(dbEngine mongo.DataStore, signingKey string, location *time.Location
 		DBEngine:   dbEngine,
 		SigningKey: k,
 		Location:   location,
+		Logger:     log.New(os.Stdout, "speedlog ", log.LstdFlags|log.Lshortfile),
 	}
 }
 
@@ -59,7 +61,6 @@ func (env *Env) ExportEventRoutes(router *mux.Router) {
 		Queries("metricTimeTo", "{metricTimeTo:.+}").
 		Queries("project", "{project:.+}").
 		Queries("groupBy", "{groupBy:.+}")
-
 	router.Use(env.corsMiddleware)
 	private.Use(env.JWTMiddleware)
 }

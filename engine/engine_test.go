@@ -16,6 +16,7 @@ import (
 var (
 	ok     = testutils.Ok
 	assert = testutils.Assert
+	equals = testutils.Equals
 )
 
 // PACKAGE TEST CONFIGURATION
@@ -90,12 +91,15 @@ func (d DataStoreMock) DelProject(id string) (err error) {
 }
 
 // Test engine
-func NewTestEnv(t testing.TB) (env *Env) {
+func NewTestEnv(t testing.TB, allowOrigin string) (env *Env) {
 	dbEngine := &DataStoreMock{}
 	location, err := time.LoadLocation(location)
 	ok(t, err)
 	env = NewEnv(dbEngine, singKey, location)
 	env.Logger = log.New(os.Stdout, "testing ", log.LstdFlags|log.Lshortfile)
+	if len(allowOrigin) > 0 {
+		env.AllowOrigin = allowOrigin
+	}
 	return
 }
 

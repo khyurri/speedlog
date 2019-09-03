@@ -37,7 +37,7 @@ func TestCreateProject(t *testing.T) {
 		},
 	}
 
-	env := NewTestEnv(t)
+	env := NewTestEnv(t, "*")
 	router := mux.NewRouter()
 	env.ExportProjectRoutes(router)
 
@@ -57,5 +57,6 @@ func TestCreateProject(t *testing.T) {
 		w := httptest.NewRecorder()
 		router.ServeHTTP(w, r)
 		assert(t, project.ExpCode == w.Code, fmt.Sprintf("wrong code `%d` at round %d", w.Code, round))
+		options(t, "/private/project/", router)
 	}
 }

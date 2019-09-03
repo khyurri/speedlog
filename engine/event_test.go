@@ -46,7 +46,7 @@ func TestCreateEventHttp(t *testing.T) {
 		},
 	}
 
-	env := NewTestEnv(t)
+	env := NewTestEnv(t, "*")
 	router := mux.NewRouter()
 	env.ExportEventRoutes(router)
 
@@ -91,11 +91,9 @@ func TestGetEventsHttp(t *testing.T) {
 		},
 	}
 
-	env := NewTestEnv(t)
+	env := NewTestEnv(t, "*")
 	router := mux.NewRouter()
 	env.ExportEventRoutes(router)
-
-	// todo: check options
 
 	// check get
 	for round, event := range testRounds {
@@ -135,6 +133,21 @@ func TestGetEventsHttp(t *testing.T) {
 
 		assert(t, event.ExpCode == w.Code,
 			fmt.Sprintf("wrong code `%d` at round %d.\nurl: %s\n", w.Code, round, u.String()))
-	}
 
+		if 200 == w.Code {
+			options(t, u.String(), router)
+		}
+	}
+}
+
+// check OPTIONS header
+func options(t testing.TB, url string, router *mux.Router) {
+	r, err := http.NewRequest("OPTIONS", url, nil)
+	ok(t, err)
+	r.Header.Set("Content-Type", "application/json")
+	w := httptest.NewRecorder()
+	router.ServeHTTP(w, r)
+	equals(t, "Content-Type", w.HeaderMap["Access-Control-Allow-Headers"][0])
+	t.Log(w.HeaderMap["Access-Control-Allow-Origin"])
+	equals(t, "*", w.HeaderMap["Access-Control-Allow-Origin"][0])
 }
