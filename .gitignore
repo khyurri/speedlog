@@ -3,3 +3,4 @@ speedlog.iml
 docker-compose.yml
 example.http
 coverage.out
+Readme_*.md
