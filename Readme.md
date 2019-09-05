@@ -1,148 +1,147 @@
 # Speedlog — back-end for performance tracking
 
-REST only interface. No UI.
+Speedlog is a server that stores the performance log of third-party applications.
 
-# Quick start
+I developed `speedlog` to monitor the performance of the `front-end`. 
+But you can use `speedlog` in any applications that can send `REST` requests.
 
-Run `speedlog` using docker-compose.yml:
+## Usage example `speedlog` + `perfumejs` + `graphite`
+
+Speedlog may be a suitable `back-end` for storing data collected using [perfume.js](https://github.com/Zizzamia/perfume.js)
+
+Use the following `docker-compose.yml` file to start the `speedlog` server and `graphite` server. 
+
+>Specify a random key in the parameter `--jwtkey`   
 
 ```yaml
 version: '3'
 services:
   app:
-    image: khyurri/speedlog:0.1.3
-    command: "/opt/speedlog/main --jwtkey=*** --mongo=mongo:27017"
+    image: khyurri/speedlog:0.1.9
+    command: "/opt/speedlog/main
+    --jwtkey=***
+    --mongo=mongo:27017
+    --alloworigin='*'
+    --tz=\"Local\"
+    --graphite=graphite:2003
+    --project=myProject"
     depends_on:
       - mongo
+      - graphite
     ports:
       - "8012:8012"
+    restart: always
   mongo:
     image: mongo:3.6
+  graphite:
+    image: graphiteapp/graphite-statsd
     ports:
-      - "27017:27017"
-``` 
-
-## Create user
-
-```bash
-docker exec -it speedlog_app_1 /opt/speedlog/main --mode=adduser --login=mylogin --password=mypassword --mongo=mongo:27017
+      - "8013:80"
 ```
 
-## Get token for user
-```bash
-curl -X POST -H "Content-Type: application/json" -d '{"login": "mylogin", "password": "mypassword"}' http://localhost:8012/login/
-```
+After launch, 2 services will be publicly available on the host: 
+- `speedlog`. Port `8012`
+- `graphite` web interface. Port `8013`
 
-## Create project
-After you get `token`, you can create new project
+### Connect perfume.js
 
-```bash
-curl -X PUT -H "Authorization: Bearer {{ token_here }}" -H "Content-Type: application/json" -d '{"title": "myproject"}' http://localhost:8012/private/project/
-``` 
+To connect `perfume.js` to` speedlog` add the following code to the `perfume` initialization
 
-## Save event 
-
-```bash
-curl -X PUT -H "Content-Type: application/json" -d '{"metricName": "backendResponse", "durationMs": 300, "project": "myproject"}' http://localhost:8012/event/
-```
-
-## Get events
-
-```bash
- curl -H "Authorization: Bearer {{ token_here }}" -H "Content-Type: application/json" "http://localhost:8012/private/events/?metricName=backendResponse&metricTimeFrom=2019-08-20T01:10&metricTimeTo=2019-08-25T00:00&groupBy=minutes&project=myproject"
-```
-
-> Don't forget to change dates on `metricTimeFrom=2019-08-20T01:10&metricTimeTo=2019-08-25T00:00`
-
-You will get something like that
-
-```json
-[
-    {
-        "MetricName":"backendResponse",
-        "MetricTime":"2019-08-23T14:16:00Z",
-        "DurationMs":0,
-        "MinDurationMs":300,
-        "MaxDurationMs":300,
-        "MedianDurationMs":300,
-        "MiddleDurationMs":300,
-        "EventCount":1
-    },
-    {
-        "MetricName":"backendResponse",
-        "MetricTime":"2019-08-23T14:27:00Z",
-        "DurationMs":0,
-        "MinDurationMs":310,
-        "MaxDurationMs":310,
-        "MedianDurationMs":310,
-        "MiddleDurationMs":310,
-        "EventCount":1
+```javascript
+var project = "myProject";
+const perfume = new Perfume({
+    firstPaint: true,
+    analyticsTracker: (metricName, duration, browser) => {
+        var xhr = new XMLHttpRequest();
+        xhr.open('POST', 'http://127.0.0.1:8012/event/');
+        xhr.setRequestHeader('Content-Type', 'application/json');
+        xhr.send(JSON.stringify({
+            "metricName": metricName,
+            "durationMs": duration,
+            "project": project
+        }));
     }
-]
+});
 ```
+
+> Do not forget to replace IP `127.0.0.1` with a real host
+
+Now you can open `graphite` in a browser at the address` http: //127.0.0.1:8013` and build something like this
+
+![Graphite example](docs/images/graphite_example.png?raw=true "Graphite example")
+
+# `speedlog` versions and Installation
+
+Prior to version 1.0.0, I am actively developing `speedlog`, which means:
+ 
+- API may change without maintaining backward compatibility
+- documentation may not be true
+- the new version may break something that worked before
+
+The latest version is always available on [dockerhub](https://hub.docker.com/r/khyurri/speedlog).
+`Docker` — my recommended way to install `speedlog`.
 
 # CLI
 
 ## Modes
-You can run `speedlog` on different modes. Default mode is `runserver`.
+The first parameter to cli must be the mode of the `speedlog`. If mode is not passed,
+then `speedlog` starts in default mode:` runserver`
 
-### Add user
+Available modes
+
+|Mode      |Description            |
+|----------|-----------------------|
+|runserver |starts the server      |
+|adduser   |adds user              |
+|addproject|adds project           |
+|delete    |deletes user or project|
+
+
+### Examples
+
+
+Starting the server and creating the `myProject` project (if not created)
 
 ```bash
---mode=adduser --login=admin --password="***"
+speedlog --jwtkey=*** --mongo=mongo:27017 --project=myProject"
 ```
 
-# REST API
 
-## Login
+User Creation
 
-|Method|Resource|Header|Body                             |
-|------|--------|------|---------------------------------|
-|POST  |/login/ | -    |`login: string, password: string`|
-
-Returns `application/json` with JWT token
-
-```json
-{
-    "token": "eyJhbGciOiJIUzI1NiIsInR5cC...." 
-}
-```
-If an error occurred, you will get error code `400` and body
-```json
-{
-    "message": "invalid login or password"
-}
+```bash
+speedlog adduser --login=admin --password="-?sEcrE7-"
 ```
 
-All requests to Private Rest zone must contain header 
-`Authorization: Bearer $token` 
 
-## Private
-### Create project
+Starting the server with exporting data to `graphite`
 
-|Method|Resource          |Header                         |Body           |
-|------|------------------|-------------------------------|---------------|
-|PUT   |/private/project/ | `Authorization: Bearer $token`|`title: string`|
+```bash
+speedlog --jwtkey=*** --mongo=mongo:27017 --graphite=graphite:2003
+```
 
-### Get events by project
 
-|Method|Resource                                 |Header                         |Body|
-|------|-----------------------------------------|-------------------------------|----|
-|GET   |/private/$project/events/?{$QueryParams} | `Authorization: Bearer $token`|    | 
+Project creation
 
-Query params
+```bash
+speedlog addproject --project=myproject
+```
 
-|Param           |Description                                                    |Example value                             |
-|----------------|---------------------------------------------------------------|------------------------------------------|
-|metric_time_from|Filter from this time. Format `Time.UTC` to seconds            |`2019-08-02T00:00:00`                     |
-|metric_time_to  |Filter to this time                                            |`2019-08-10T00:00:00`                     |
-|group_by        |Group events by time                                           |Supported values are: minutes, hours, days|
-|metric_name     |Filter by metric_name                                          |`backend_response`                        |
 
-## Public 
+Delete project
 
-### Create Event
+```bash
+speedlog delete --project=myproject
+```
 
-|Method|Resource          |Header|Body                                                    |
-|------|------------------|------|--------------------------------------------------------|
-|PUT   |/$project/event/  |      |`title: string`, `metricName: string`, `durationMs: int`|
+
+Delete user
+
+```bash
+speedlog delete --login=admin
+```
+
+
+# Contributing
+
+I need help translating documentation into English!
