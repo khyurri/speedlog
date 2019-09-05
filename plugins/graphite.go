@@ -24,10 +24,8 @@ func gPath(project, event, metric string) string {
 func (gr *graphite) Load(dbEngine mongo.DataStore) {
 	interval := 1 * time.Minute
 	rng := 1 * time.Minute
-	fmt.Println("[debug] graphite module loaded")
 	gr.ticker = time.NewTicker(interval)
 	go func() {
-		fmt.Println("[debug] graphite module started")
 		var dateFrom, dateTo time.Time
 		now := time.Now()
 		// Each circle dateFrom takes the value of dateTo, and dateTo increases by rng
@@ -58,9 +56,13 @@ func (gr *graphite) Load(dbEngine mongo.DataStore) {
 					}
 					projName := proj.Title
 					sendMap := map[string]interface{}{
-						gPath(projName, name, "median"): event.MedianDurationMs,
-						gPath(projName, name, "max"):    event.MaxDurationMs,
-						gPath(projName, name, "min"):    event.MinDurationMs,
+						gPath(projName, name, "median"):       event.MedianDurationMs,
+						gPath(projName, name, "max"):          event.MaxDurationMs,
+						gPath(projName, name, "min"):          event.MinDurationMs,
+						gPath(projName, name, "mid"):          event.MiddleDurationMs,
+						gPath(projName, name, "count"):        event.EventCount,
+						gPath(projName, name, "percentile90"): event.Percentile90,
+						gPath(projName, name, "percentile75"): event.Percentile75,
 					}
 					sendDataToGraphite(gr.host, sendMap)
 					fmt.Printf("[debug] sended")

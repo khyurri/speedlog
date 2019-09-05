@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"github.com/globalsign/mgo/bson"
 	"github.com/montanaflynn/stats"
+	"sort"
 	"time"
 )
 
@@ -27,11 +28,14 @@ type AllEvents struct {
 type AggregatedEvent struct {
 	MetricName       string        `bson:"metricName"`
 	ProjectId        bson.ObjectId `bson:"projectId"`
+	MetricTime       time.Time     // metric time up to a minute
 	MinDurationMs    float64
 	MaxDurationMs    float64
 	MedianDurationMs float64
 	MiddleDurationMs float64
 	EventCount       int
+	Percentile90     float64
+	Percentile75     float64
 	durationsMs      []float64
 }
 
@@ -74,7 +78,6 @@ func (mg *Mongo) FilterEvents(from, to time.Time, metricName, projectTitle strin
 	project, err := mg.GetProject(projectTitle)
 
 	if err != nil {
-		fmt.Printf("[error] fetch project by name: %s", err)
 		return
 	}
 
@@ -153,7 +156,7 @@ func GroupBy(group string, events []Event) (result []*AggregatedEvent, err error
 		return result, fmt.Errorf("unsupported group key %s", group)
 	}
 	result = mapEvent(events, m[group])
-	//ordered(result)
+	ordered(result)
 	return
 }
 
@@ -177,6 +180,11 @@ func groupByMinutes(eventTime time.Time) time.Time {
 		eventTime.Minute(), 0, 0, time.UTC)
 }
 
+func upToAMinute(t time.Time) time.Time {
+	res := time.Date(t.Year(), t.Month(), t.Day(), t.Hour(), t.Minute(), 0, 0, t.Location())
+	return res
+}
+
 func mapEvent(event []Event, keyFunc keyFunc) (result []*AggregatedEvent) {
 
 	if len(event) == 0 {
@@ -189,9 +197,11 @@ func mapEvent(event []Event, keyFunc keyFunc) (result []*AggregatedEvent) {
 
 		key := keyFunc(e.MetricTime)
 		if nil == m[key] {
+
 			m[key] = &AggregatedEvent{
 				MetricName: e.MetricName,
 				ProjectId:  e.ProjectId,
+				MetricTime: upToAMinute(e.MetricTime),
 			}
 		}
 
@@ -207,15 +217,24 @@ func mapEvent(event []Event, keyFunc keyFunc) (result []*AggregatedEvent) {
 }
 
 func collapse(src *AggregatedEvent) {
+
+	var err error
+
 	src.MaxDurationMs, _ = stats.Max(src.durationsMs)
 	src.MinDurationMs, _ = stats.Min(src.durationsMs)
 	src.MedianDurationMs, _ = stats.Median(src.durationsMs)
 	src.MiddleDurationMs = average(src.durationsMs)
 	src.EventCount = len(src.durationsMs)
+	src.Percentile90, err = stats.Percentile(src.durationsMs, 90)
+	src.Percentile75, err = stats.Percentile(src.durationsMs, 75)
+	if err != nil {
+		fmt.Printf("[error] persentile error:  %v\n", err)
+	}
 }
 
-//func ordered(srcs []*AggregatedEvent) {
-//	sort.Slice(srcs, func(i, j int) bool {
-//		return srcs[i].MetricTime.Before(srcs[j].MetricTime)
-//	})
-//}
+func ordered(srcs []*AggregatedEvent) {
+	fmt.Println(srcs)
+	sort.Slice(srcs, func(i, j int) bool {
+		return srcs[i].MetricTime.Before(srcs[j].MetricTime)
+	})
+}

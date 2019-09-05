@@ -84,6 +84,28 @@ func TestGetAllEvents(t *testing.T) {
 				medianDurationMs: 1.2000000000000002, // just hardcoded value
 			}},
 		},
+		{
+			id:             2,
+			dateFrom:       getDateFrom(t, "2019-08-30 00:01"),
+			dateToInterval: getDuration(testDuration2Minutes),
+			groupBy:        "minutes",
+			expectEvents:   11,
+			metricName:     "resp0",
+			expectGroups:   1,
+			aggregatedLen:  2, // duration 1 minute, group by minutes
+			aggregatedEvents: []testEventAggregated{
+				{
+					minDurationMs:    0.1,
+					maxDurationMs:    0.9,
+					medianDurationMs: 0.3,
+				},
+				{
+					minDurationMs:    0.5,
+					maxDurationMs:    2,
+					medianDurationMs: 1.2000000000000002, // just hardcoded value
+				},
+			},
+		},
 	}
 
 	// Run checks
