@@ -13,6 +13,7 @@ import (
 	"os"
 	"path/filepath"
 	"runtime"
+	"sync"
 	"time"
 )
 
@@ -88,10 +89,22 @@ func main() {
 			return
 		}
 
+		////////////////////////////////////////////////////////////////////////////////
+		// LOAD PLUGINS
+
+		var plgns []plugins.Plugin
+		var stopped sync.WaitGroup
+		sigStop := make(plugins.SigChan)
+
 		if len(cliParams.Graphite) > 0 {
-			graphite := plugins.NewGraphite(cliParams.Graphite, location)
-			graphite.Load(dbEngine)
+			graphite := plugins.NewGraphite(cliParams.Graphite, time.Minute*1)
+			plgns = append(plgns, graphite)
 		}
+
+		go plugins.LoadPlugins(plgns, sigStop, &stopped, dbEngine)
+
+		// END LOAD PLUGINS
+		////////////////////////////////////////////////////////////////////////////////
 
 		if len(cliParams.Project) > 0 {
 			err = dbEngine.AddProject(cliParams.Project)
@@ -112,7 +125,15 @@ func main() {
 			ReadTimeout:  15 * time.Second,
 		}
 		err = srv.ListenAndServe()
-		ok(cLogger, err)
+		if err != nil {
+			_, file, line, _ := runtime.Caller(1)
+			fmt.Printf("\033[31m%s:%d: unexpected error: %s\033[39m\n\n", filepath.Base(file), line, err.Error())
+		}
+
+		// UNLOAD PLUGINS
+		sigStop <- struct{}{}
+		stopped.Wait() // TODO: add timeout
+
 	case "adduser":
 		err := env.DBEngine.AddUser(cliParams.Login, cliParams.Password)
 		ok(cLogger, err)

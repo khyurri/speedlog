@@ -90,6 +90,10 @@ func (d DataStoreMock) DelProject(id string) (err error) {
 	panic("implement me")
 }
 
+func (d DataStoreMock) DelEvents(to time.Time) (err error) {
+	panic("implement me")
+}
+
 // Test engine
 func NewTestEnv(t testing.TB, allowOrigin string) (env *Env) {
 	dbEngine := &DataStoreMock{}

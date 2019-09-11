@@ -70,6 +70,10 @@ func (mg *Mongo) SaveEvent(metricName, project string, durationMs float64) (err 
 	return mg.saveEventAtTime(metricName, project, durationMs, time.Now())
 }
 
+func (mg *Mongo) DelEvents(to time.Time) (err error) {
+	return
+}
+
 func (mg *Mongo) FilterEvents(from, to time.Time, metricName, projectTitle string) (events []Event, err error) {
 
 	sess := mg.Clone()
