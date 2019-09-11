@@ -46,6 +46,7 @@ func (c *cleaner) clean(dbEngine mongo.DataStore) {
 	now := time.Now()
 	then := now.Add(time.Duration(-1*c.ttl) * time.Second)
 	err := dbEngine.DelEvents(then)
+	fmt.Println("Clearing events")
 	if err != nil {
 		fmt.Printf("[error] %v\n", err)
 	}

@@ -26,6 +26,7 @@ type params struct {
 	AllowOrigin string `arg:"-o" help:"Mode runserver. Add Access-Control-Allow-Origin header with passed by param value"`
 	TZ          string `arg:"-t" help:"Mode runserver. Timezone. Default UTC±00:00."`
 	Graphite    string `arg:"-g" help:"Mode runserver. Graphite host:port"`
+	EventsTTL   int    `arg:"--ttl" help:"Mode runserver. Time in seconds after which events are deleted. Default 0 — never"`
 	Project     string `arg:"-r" help:"Modes runserver, addproject. Project title."`
 	Login       string `arg:"-l" help:"Mode adduser. Login for new user"`
 	Password    string `arg:"-p" help:"Mode adduser. Password for new user"`
@@ -99,6 +100,11 @@ func main() {
 		if len(cliParams.Graphite) > 0 {
 			graphite := plugins.NewGraphite(cliParams.Graphite, time.Minute*1)
 			plgns = append(plgns, graphite)
+		}
+
+		if cliParams.EventsTTL > 0 {
+			cleaner := plugins.NewCleaner(cliParams.EventsTTL, time.Minute*1)
+			plgns = append(plgns, cleaner)
 		}
 
 		go plugins.LoadPlugins(plgns, sigStop, &stopped, dbEngine)
