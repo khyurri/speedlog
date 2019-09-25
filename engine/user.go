@@ -3,7 +3,9 @@ package engine
 import (
 	"encoding/json"
 	"errors"
+	"fmt"
 	"github.com/dgrijalva/jwt-go"
+	"github.com/khyurri/speedlog/utils"
 	"golang.org/x/crypto/bcrypt"
 	"net/http"
 )
@@ -25,9 +27,7 @@ func tokenResp(token string, response *Resp) {
 
 func (env *Env) AddUser(login, password string) (err error) {
 	err = env.DBEngine.AddUser(login, password)
-	if err != nil {
-		Logger.Printf("[error] cannot create user %s with password %s", login, password)
-	}
+	utils.Ok(errors.New(fmt.Sprintf("cannot create user %s with password %s", login, password)))
 	return
 }
 
@@ -44,7 +44,7 @@ func (env *Env) authenticateHttp() http.HandlerFunc {
 
 		if r.Body == nil {
 			_r, _ := json.Marshal(r)
-			env.Logger.Printf("[error] request body is nil. Request: %s", _r)
+			utils.Ok(errors.New(fmt.Sprintf("request body is nil. Request: %s", _r)))
 			response.Status = StatusErr
 			return
 		}
@@ -52,7 +52,7 @@ func (env *Env) authenticateHttp() http.HandlerFunc {
 		u := &request{}
 		err := decoder.Decode(&u)
 		if err != nil {
-			env.Logger.Printf("[error] invalid login request: %v", err)
+			utils.Ok(errors.New(fmt.Sprintf("invalid login request: %+v", err)))
 			response.Status = StatusIntErr
 			return
 		}

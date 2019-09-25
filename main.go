@@ -28,6 +28,7 @@ type params struct {
 	Project     string `arg:"-r" help:"Modes runserver, addproject. Project title."`
 	Login       string `arg:"-l" help:"Mode adduser. Login for new user"`
 	Password    string `arg:"-p" help:"Mode adduser. Password for new user"`
+	Verbose     bool   `arg:"-v" help:"All modes. Add debug messages"`
 }
 
 func parseTZ(timezone string) (*time.Location, error) {
@@ -47,9 +48,11 @@ func addProjectMode(cliParams *params, dbEngine mongo.DataStore) (err error) {
 }
 
 // init logger
-func initLogger() {
+func initLogger(verbose bool) {
 	log.SetFlags(log.LstdFlags | log.Lmicroseconds | log.Llongfile)
-	utils.Level = utils.LG_DEBUG
+	if verbose {
+		utils.Level = utils.LG_DEBUG
+	}
 }
 
 func main() {
@@ -67,7 +70,7 @@ func main() {
 
 	arg.MustParse(cliParams)
 
-	initLogger()
+	initLogger(cliParams.Verbose)
 
 	dbEngine, err := mongo.New("speedlog", cliParams.Mongo)
 	utils.Ok(err)

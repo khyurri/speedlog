@@ -6,8 +6,6 @@ import (
 	"github.com/khyurri/speedlog/engine/mongo"
 	"github.com/khyurri/speedlog/testutils"
 	"golang.org/x/crypto/bcrypt"
-	"log"
-	"os"
 	"testing"
 	"time"
 )
@@ -100,7 +98,6 @@ func NewTestEnv(t testing.TB, allowOrigin string) (env *Env) {
 	location, err := time.LoadLocation(location)
 	ok(t, err)
 	env = NewEnv(dbEngine, singKey, location)
-	env.Logger = log.New(os.Stdout, "testing ", log.LstdFlags|log.Lshortfile)
 	if len(allowOrigin) > 0 {
 		env.AllowOrigin = allowOrigin
 	}

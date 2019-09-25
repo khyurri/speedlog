@@ -75,8 +75,8 @@ func TestGetEventsHttp(t *testing.T) {
 			ExpCode:        403,
 			MetricName:     "metricName",
 			Project:        "someProject",
-			MetricTimeFrom: "2019-09-02 00:01:00",
-			MetricTimeTo:   "2019-09-02 00:02:00",
+			MetricTimeFrom: "2019-09-02T00:01:00",
+			MetricTimeTo:   "2019-09-02T00:02:00",
 			GroupBy:        "minutes",
 		},
 		{
@@ -85,8 +85,8 @@ func TestGetEventsHttp(t *testing.T) {
 			Login:          validLogin,
 			MetricName:     "metricName",
 			Project:        "someProject",
-			MetricTimeFrom: "2019-09-02 00:01:00",
-			MetricTimeTo:   "2019-09-02 00:02:00",
+			MetricTimeFrom: "2019-09-02T00:01:00",
+			MetricTimeTo:   "2019-09-02T00:02:00",
 			GroupBy:        "minutes",
 		},
 	}

@@ -4,8 +4,6 @@ import (
 	"github.com/go-chi/jwtauth"
 	"github.com/gorilla/mux"
 	"github.com/khyurri/speedlog/engine/mongo"
-	"log"
-	"os"
 	"time"
 )
 
@@ -21,7 +19,6 @@ type Env struct {
 	SigningKey  *jwtauth.JWTAuth
 	AllowOrigin string
 	Location    *time.Location
-	Logger      *log.Logger
 }
 
 // NewEnv - create new env struct
@@ -31,7 +28,6 @@ func NewEnv(dbEngine mongo.DataStore, signingKey string, location *time.Location
 		DBEngine:   dbEngine,
 		SigningKey: k,
 		Location:   location,
-		Logger:     log.New(os.Stdout, "speedlog ", log.LstdFlags|log.Lshortfile),
 	}
 }
 
