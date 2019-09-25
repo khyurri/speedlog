@@ -8,11 +8,9 @@ import (
 	"github.com/khyurri/speedlog/engine"
 	"github.com/khyurri/speedlog/engine/mongo"
 	"github.com/khyurri/speedlog/plugins"
+	"github.com/khyurri/speedlog/utils"
 	"log"
 	"net/http"
-	"os"
-	"path/filepath"
-	"runtime"
 	"sync"
 	"time"
 )
@@ -48,11 +46,10 @@ func addProjectMode(cliParams *params, dbEngine mongo.DataStore) (err error) {
 	return
 }
 
-func ok(lg *log.Logger, err error) {
-	if err != nil {
-		_, file, line, _ := runtime.Caller(1)
-		lg.Fatalf("\033[31m%s:%d: unexpected error: %s\033[39m\n\n", filepath.Base(file), line, err.Error())
-	}
+// init logger
+func initLogger() {
+	log.SetFlags(log.LstdFlags | log.Lmicroseconds | log.Llongfile)
+	utils.Level = utils.LG_DEBUG
 }
 
 func main() {
@@ -69,14 +66,15 @@ func main() {
 	////////////////////////////////////////
 
 	arg.MustParse(cliParams)
-	cLogger := log.New(os.Stdout, "speedlog ", log.LstdFlags|log.Lshortfile)
+
+	initLogger()
 
 	dbEngine, err := mongo.New("speedlog", cliParams.Mongo)
-	ok(cLogger, err)
+	utils.Ok(err)
 	defer dbEngine.Session.Close()
 
 	location, err := parseTZ(cliParams.TZ)
-	ok(cLogger, err)
+	utils.Ok(err)
 
 	env := engine.NewEnv(dbEngine, cliParams.JWTKey, location)
 	if len(cliParams.AllowOrigin) > 0 {
@@ -86,7 +84,7 @@ func main() {
 	case "runserver":
 
 		if len(cliParams.JWTKey) == 0 {
-			cLogger.Printf("[error] cannot start server. Required jwtkey")
+			fmt.Println("Cannot start server. Required jwtkey")
 			return
 		}
 
@@ -113,10 +111,7 @@ func main() {
 		////////////////////////////////////////////////////////////////////////////////
 
 		if len(cliParams.Project) > 0 {
-			err = dbEngine.AddProject(cliParams.Project)
-			if err != nil {
-				cLogger.Printf("[info] project %s exists. skipping", cliParams.Project)
-			}
+			_ = dbEngine.AddProject(cliParams.Project)
 		}
 
 		r := mux.NewRouter()
@@ -131,10 +126,6 @@ func main() {
 			ReadTimeout:  15 * time.Second,
 		}
 		err = srv.ListenAndServe()
-		if err != nil {
-			_, file, line, _ := runtime.Caller(1)
-			fmt.Printf("\033[31m%s:%d: unexpected error: %s\033[39m\n\n", filepath.Base(file), line, err.Error())
-		}
 
 		// UNLOAD PLUGINS
 		sigStop <- struct{}{}
@@ -142,12 +133,12 @@ func main() {
 
 	case "adduser":
 		err := env.DBEngine.AddUser(cliParams.Login, cliParams.Password)
-		ok(cLogger, err)
+		utils.Ok(err)
 	case "addproject":
 		err = addProjectMode(cliParams, dbEngine)
-		ok(cLogger, err)
+		utils.Ok(err)
 	default:
-		ok(cLogger, errors.New(fmt.Sprintf("unknown mode '%s'", cliParams.Mode)))
+		utils.Ok(errors.New(fmt.Sprintf("unknown mode '%s'", cliParams.Mode)))
 	}
 
 }
