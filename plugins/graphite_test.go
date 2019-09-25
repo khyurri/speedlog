@@ -1,6 +1,7 @@
 package plugins
 
 import (
+	"github.com/khyurri/speedlog/engine/mongo"
 	"sync"
 	"testing"
 	"time"
@@ -16,10 +17,10 @@ func TestGraphite_Load(t *testing.T) {
 	var sigStopped sync.WaitGroup
 	sigStopped.Add(1)
 	gr := NewGraphite(host, interval)
-	dbEngine := &dataStoreMock{}
+	dbEngine := &mongo.DataStoreMock{}
 	gr.Load(dbEngine, sigStop, &sigStopped)
 	time.Sleep(testInterval)
 	sigStop <- struct{}{}
 	sigStopped.Wait()
-	equals(t, 2, dbEngine.AllEventsCalledTimes)
+	equals(t, 2, mongo.AllEventsCalledTimes)
 }

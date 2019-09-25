@@ -1,6 +1,7 @@
 package plugins
 
 import (
+	"github.com/khyurri/speedlog/engine/mongo"
 	"sync"
 	"testing"
 	"time"
@@ -15,11 +16,11 @@ func TestCleaner_Load(t *testing.T) {
 
 	sigStopped.Add(1)
 	cl := NewCleaner(ttl, interval)
-	dbEng := &dataStoreMock{}
+	dbEng := &mongo.DataStoreMock{}
 	cl.Load(dbEng, sigStop, &sigStopped)
 	time.Sleep(testInterval) // sleep 1 interval
 	sigStop <- struct{}{}
 	sigStopped.Wait()
 
-	equals(t, 2, dbEng.DelEventsCalledTimes)
+	equals(t, 2, mongo.DelEventsCalledTimes)
 }
