@@ -43,7 +43,6 @@ func (gr *graphite) Load(dbEngine mongo.DataStore, sigStop SigChan, sigStopped *
 				sigStopped.Done()
 				gr.ticker.Stop()
 			}
-
 			dateFrom = dateTo
 		}
 	}()
