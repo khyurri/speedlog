@@ -3,15 +3,27 @@ package engine
 import (
 	"encoding/json"
 	"errors"
+	"fmt"
 	"github.com/gorilla/mux"
 	"github.com/khyurri/speedlog/engine/mongo"
+	"github.com/khyurri/speedlog/utils"
 	"net/http"
 	"time"
 )
 
 const (
-	timeLayout = "2006-01-02T15:04"
+	timeLayout = "2006-01-02T15:04:05"
 )
+
+// badRequest returns true if StatusErr is set
+func badRequest(err error, r *Resp) bool {
+	if err != nil {
+		utils.Ok(err)
+		r.Status = StatusErr
+		return true
+	}
+	return false
+}
 
 func (env *Env) createEventHttp() http.HandlerFunc {
 
@@ -25,12 +37,11 @@ func (env *Env) createEventHttp() http.HandlerFunc {
 		dec := json.NewDecoder(r.Body)
 		err = dec.Decode(target)
 		if err != nil {
-			env.Logger.Printf("[error] deconding request error: %s", err)
-			env.Logger.Printf("[debug] request body: %s", r.Body)
+			utils.Ok(fmt.Errorf(err.Error()+". Body: %+v", r.Body))
 			return
 		}
-		env.Logger.Printf("[debug] metricName: %s, durationMs: %f\n",
-			target.MetricName, target.DurationMs)
+		utils.Debug(fmt.Sprintf("metricName: %s, durationMs: %f\n",
+			target.MetricName, target.DurationMs))
 		if len(target.MetricName) == 0 {
 			return errors.New("empty metricName")
 		}
@@ -46,27 +57,26 @@ func (env *Env) createEventHttp() http.HandlerFunc {
 		err := mapRequestToStruct(r, req)
 
 		if err != nil {
-			env.Logger.Printf("[debug] internal error %s", err)
+			utils.Ok(err)
 			response.Status = StatusIntErr
 			return
 		}
 
 		err = env.DBEngine.SaveEvent(req.MetricName, req.Project, req.DurationMs)
 		if err != nil {
-			env.Logger.Printf("[error] %s\n", err)
+			utils.Ok(err)
 			response.Status = StatusIntErr
 			return
 		}
 
-		env.Logger.Printf("[debug] requested params: %s", r.Body)
+		utils.Debug(fmt.Sprintf("requested params: %s", r.Body))
 		saved := struct {
 			Saved bool `json:"saved"`
 		}{true}
 		response.Status = StatusOk
 		response.JsonBody, err = json.Marshal(saved)
-
+		utils.Ok(err)
 	}
-
 }
 
 func (env *Env) getEventsHttp() http.HandlerFunc {
@@ -80,20 +90,16 @@ func (env *Env) getEventsHttp() http.HandlerFunc {
 		params := mux.Vars(r)
 
 		metricTimeFrom, err := time.Parse(timeLayout, params["metricTimeFrom"])
-		if err != nil {
-			env.Logger.Printf("[error] %s", err)
+		if badRequest(err, response) {
+			return
 		}
 
 		metricTimeTo, err := time.Parse(timeLayout, params["metricTimeTo"])
-		if err != nil {
-			env.Logger.Printf("[error] %s", err)
+		if badRequest(err, response) {
+			return
 		}
 
-		if err != nil {
-			response.Status = StatusErr
-		}
-
-		env.Logger.Printf("[debug] %s -> %s", metricTimeFrom, metricTimeTo)
+		utils.Debug(fmt.Sprintf("%s -> %s", metricTimeFrom, metricTimeTo))
 		events, err := env.DBEngine.FilterEvents(
 			metricTimeFrom,
 			metricTimeTo,

@@ -70,6 +70,18 @@ func (mg *Mongo) SaveEvent(metricName, project string, durationMs float64) (err 
 	return mg.saveEventAtTime(metricName, project, durationMs, time.Now())
 }
 
+func (mg *Mongo) DelEvents(to time.Time) (err error) {
+	sess := mg.Clone()
+	defer sess.Close()
+	fmt.Println(to)
+	_, err = mg.Collection(eventCollection, sess).RemoveAll(bson.M{
+		"metricTime": bson.M{
+			"$lte": to,
+		},
+	})
+	return
+}
+
 func (mg *Mongo) FilterEvents(from, to time.Time, metricName, projectTitle string) (events []Event, err error) {
 
 	sess := mg.Clone()
@@ -164,7 +176,7 @@ func (mg *Mongo) delAllEvents(projectId string) (err error) {
 	sess := mg.Clone()
 	defer sess.Close()
 
-	err = mg.Collection(eventCollection, sess).Remove(bson.M{
+	_, err = mg.Collection(eventCollection, sess).RemoveAll(bson.M{
 		"projectId": projectId,
 	})
 

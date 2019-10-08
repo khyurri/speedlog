@@ -2,16 +2,12 @@ package mongo
 
 import (
 	"github.com/globalsign/mgo"
-	"log"
-	"os"
+	"github.com/khyurri/speedlog/utils"
 	"sync"
 	"time"
 )
 
-var (
-	logger *log.Logger
-	once   sync.Once
-)
+var once sync.Once
 
 const (
 	userCollection    = "User"
@@ -23,6 +19,7 @@ type DataStore interface {
 	FilterEvents(from, to time.Time, metricName, project string) (events []Event, err error)
 	AllEvents(from, to time.Time) (events []AllEvents, err error)
 	SaveEvent(metricName, project string, durationMs float64) (err error)
+	DelEvents(to time.Time) (err error)
 
 	AddUser(login string, password string) (err error)
 	GetUser(login string) (*User, error)
@@ -40,10 +37,8 @@ type Mongo struct {
 }
 
 func New(db string, url string) (engine *Mongo, err error) {
-	logger = log.New(os.Stdout, "speedlog mongodb ", log.LstdFlags|log.Lshortfile)
 	engine = &Mongo{DbName: db}
 	engine.Session, err = mgo.Dial(url)
-	//mgo.SetLogger(logger)
 	if err != nil {
 		return
 	}
@@ -69,30 +64,26 @@ func (mg *Mongo) DropDatabase() error {
 
 func (mg *Mongo) CreateIndexes() (err error) {
 	once.Do(func() {
-		logger.Printf("[debug] index check")
 
-		logger.Printf("[debug] collection `User`")
+		utils.Debug("starting index check")
+
 		coll := mg.Collection(userCollection, nil)
 		err = coll.EnsureIndex(mgo.Index{
 			Key:    []string{"login"},
 			Unique: true,
 		})
-		if err != nil {
-			logger.Printf("[error] cannot create index `User`: %s", err)
-		}
 
-		logger.Printf("[debug] collection `project`")
+		utils.Ok(err)
+		utils.Debug("collection `project`")
+
 		coll = mg.Collection(projectCollection, nil)
 		err = coll.EnsureIndex(mgo.Index{
 			Key:    []string{"title"},
 			Unique: true,
 		})
+		utils.Ok(err)
+		utils.Debug("index check complete")
 
-		if err != nil {
-			logger.Printf("[error] cannot create index `project`: %s", err)
-		}
-
-		logger.Printf("[debug] index check complete")
 	})
 	return
 }

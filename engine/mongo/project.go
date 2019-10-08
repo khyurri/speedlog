@@ -3,6 +3,7 @@ package mongo
 import (
 	"fmt"
 	"github.com/globalsign/mgo/bson"
+	"github.com/khyurri/speedlog/utils"
 )
 
 type Project struct {
@@ -39,16 +40,13 @@ func (mg *Mongo) DelProject(id string) (err error) {
 
 	// Delete events
 	err = mg.delAllEvents(id)
-	if err != nil {
-		logger.Printf("[error] cannot delete events by project id %s: %s", id, err)
-	}
+	utils.Ok(err)
+
 	// Delete project
 	err = mg.Collection(projectCollection, sess).Remove(bson.M{
 		"_id": bson.ObjectIdHex(id),
 	})
-	if err != nil {
-		logger.Printf("[error] cannot delete project %s: %s", id, err)
-	}
+	utils.Ok(err)
 
 	return
 }

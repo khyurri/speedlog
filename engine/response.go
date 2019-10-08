@@ -1,6 +1,7 @@
 package engine
 
 import (
+	"github.com/khyurri/speedlog/utils"
 	"log"
 	"net/http"
 )
@@ -43,11 +44,7 @@ func (r *Resp) Render(w http.ResponseWriter) {
 	r.setHeader(w)
 	w.Header().Set("Content-Type", "application/json")
 	_, err := w.Write(r.JsonBody)
-	if err != nil {
-		// TODO: fix null pointer exception
-		// r.Logger.Fatal(err)
-		return
-	}
+	utils.Ok(err)
 }
 
 // returns struct ready for rendering with text message

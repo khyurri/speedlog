@@ -8,11 +8,10 @@ import (
 	"github.com/khyurri/speedlog/engine"
 	"github.com/khyurri/speedlog/engine/mongo"
 	"github.com/khyurri/speedlog/plugins"
+	"github.com/khyurri/speedlog/utils"
 	"log"
 	"net/http"
-	"os"
-	"path/filepath"
-	"runtime"
+	"sync"
 	"time"
 )
 
@@ -25,9 +24,11 @@ type params struct {
 	AllowOrigin string `arg:"-o" help:"Mode runserver. Add Access-Control-Allow-Origin header with passed by param value"`
 	TZ          string `arg:"-t" help:"Mode runserver. Timezone. Default UTC±00:00."`
 	Graphite    string `arg:"-g" help:"Mode runserver. Graphite host:port"`
+	EventsTTL   int    `arg:"--ttl" help:"Mode runserver. Time in seconds after which events are deleted. Default 0 — never"`
 	Project     string `arg:"-r" help:"Modes runserver, addproject. Project title."`
 	Login       string `arg:"-l" help:"Mode adduser. Login for new user"`
 	Password    string `arg:"-p" help:"Mode adduser. Password for new user"`
+	Verbose     bool   `arg:"-v" help:"All modes. Add debug messages"`
 }
 
 func parseTZ(timezone string) (*time.Location, error) {
@@ -46,10 +47,11 @@ func addProjectMode(cliParams *params, dbEngine mongo.DataStore) (err error) {
 	return
 }
 
-func ok(lg *log.Logger, err error) {
-	if err != nil {
-		_, file, line, _ := runtime.Caller(1)
-		lg.Fatalf("\033[31m%s:%d: unexpected error: %s\033[39m\n\n", filepath.Base(file), line, err.Error())
+// init logger
+func initLogger(verbose bool) {
+	log.SetFlags(log.LstdFlags | log.Lmicroseconds | log.Llongfile)
+	if verbose {
+		utils.Level = utils.LG_DEBUG
 	}
 }
 
@@ -67,14 +69,15 @@ func main() {
 	////////////////////////////////////////
 
 	arg.MustParse(cliParams)
-	cLogger := log.New(os.Stdout, "speedlog ", log.LstdFlags|log.Lshortfile)
+
+	initLogger(cliParams.Verbose)
 
 	dbEngine, err := mongo.New("speedlog", cliParams.Mongo)
-	ok(cLogger, err)
+	utils.Ok(err)
 	defer dbEngine.Session.Close()
 
 	location, err := parseTZ(cliParams.TZ)
-	ok(cLogger, err)
+	utils.Ok(err)
 
 	env := engine.NewEnv(dbEngine, cliParams.JWTKey, location)
 	if len(cliParams.AllowOrigin) > 0 {
@@ -84,20 +87,34 @@ func main() {
 	case "runserver":
 
 		if len(cliParams.JWTKey) == 0 {
-			cLogger.Printf("[error] cannot start server. Required jwtkey")
+			fmt.Println("Cannot start server. Required jwtkey")
 			return
 		}
 
+		////////////////////////////////////////////////////////////////////////////////
+		// LOAD PLUGINS
+
+		var plgns []plugins.Plugin
+		var stopped sync.WaitGroup
+		sigStop := make(plugins.SigChan)
+
 		if len(cliParams.Graphite) > 0 {
-			graphite := plugins.NewGraphite(cliParams.Graphite, location)
-			graphite.Load(dbEngine)
+			graphite := plugins.NewGraphite(cliParams.Graphite, time.Minute*1)
+			plgns = append(plgns, graphite)
 		}
 
+		if cliParams.EventsTTL > 0 {
+			cleaner := plugins.NewCleaner(cliParams.EventsTTL, time.Minute*1)
+			plgns = append(plgns, cleaner)
+		}
+
+		go plugins.LoadPlugins(plgns, sigStop, &stopped, dbEngine)
+
+		// END LOAD PLUGINS
+		////////////////////////////////////////////////////////////////////////////////
+
 		if len(cliParams.Project) > 0 {
-			err = dbEngine.AddProject(cliParams.Project)
-			if err != nil {
-				cLogger.Printf("[info] project %s exists. skipping", cliParams.Project)
-			}
+			_ = dbEngine.AddProject(cliParams.Project)
 		}
 
 		r := mux.NewRouter()
@@ -112,15 +129,19 @@ func main() {
 			ReadTimeout:  15 * time.Second,
 		}
 		err = srv.ListenAndServe()
-		ok(cLogger, err)
+
+		// UNLOAD PLUGINS
+		sigStop <- struct{}{}
+		stopped.Wait() // TODO: add timeout
+
 	case "adduser":
 		err := env.DBEngine.AddUser(cliParams.Login, cliParams.Password)
-		ok(cLogger, err)
+		utils.Ok(err)
 	case "addproject":
 		err = addProjectMode(cliParams, dbEngine)
-		ok(cLogger, err)
+		utils.Ok(err)
 	default:
-		ok(cLogger, errors.New(fmt.Sprintf("unknown mode '%s'", cliParams.Mode)))
+		utils.Ok(errors.New(fmt.Sprintf("unknown mode '%s'", cliParams.Mode)))
 	}
 
 }
