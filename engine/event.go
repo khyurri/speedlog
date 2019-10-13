@@ -15,6 +15,8 @@ const (
 	timeLayout = "2006-01-02T15:04:05"
 )
 
+var debug = utils.Debug
+
 // badRequest returns true if StatusErr is set
 func badRequest(err error, r *Resp) bool {
 	if err != nil {
@@ -25,23 +27,76 @@ func badRequest(err error, r *Resp) bool {
 	return false
 }
 
-func (env *Env) createEventHttp() http.HandlerFunc {
+type eventRequest struct {
+	Id         int     `json:"id"`
+	MetricName string  `json:"metricName"`
+	DurationMs float64 `json:"durationMs"`
+	Project    string  `json:"project"`
+}
 
-	type request struct {
-		MetricName string  `json:"metricName"`
-		DurationMs float64 `json:"durationMs"`
-		Project    string  `json:"project"`
+type eventsRequest []eventRequest
+
+func (env *Env) createEventsHttp() http.HandlerFunc {
+
+	type respMessage struct {
+		Id   int `json:"id"`
+		Code int `json:"code"`
 	}
 
-	mapRequestToStruct := func(r *http.Request, target *request) (err error) {
+	mapRequestToList := func(r *http.Request, target *eventsRequest) (err error) {
 		dec := json.NewDecoder(r.Body)
 		err = dec.Decode(target)
 		if err != nil {
 			utils.Ok(fmt.Errorf(err.Error()+". Body: %+v", r.Body))
 			return
 		}
-		utils.Debug(fmt.Sprintf("metricName: %s, durationMs: %f\n",
-			target.MetricName, target.DurationMs))
+		return
+	}
+
+	return func(w http.ResponseWriter, r *http.Request) {
+		response := &Resp{}
+		defer response.Render(w)
+
+		req := &eventsRequest{}
+		err := mapRequestToList(r, req)
+		if err != nil {
+			utils.Ok(err)
+			response.Status = StatusIntErr
+			return
+		}
+		var respMessages []respMessage
+		if len(*req) > 0 {
+			for _, event := range *req {
+				err := env.DBEngine.SaveEvent(
+					event.MetricName, event.Project, event.DurationMs)
+				if err != nil {
+					respMessages = append(respMessages, respMessage{
+						Id:   event.Id,
+						Code: http.StatusBadRequest,
+					})
+				} else {
+					respMessages = append(respMessages, respMessage{
+						Id:   event.Id,
+						Code: http.StatusOK,
+					})
+				}
+
+			}
+		}
+		response.JsonBody, err = json.Marshal(respMessages)
+		response.Status = StatusOk
+	}
+}
+
+func (env *Env) createEventHttp() http.HandlerFunc {
+
+	mapRequestToStruct := func(r *http.Request, target *eventRequest) (err error) {
+		dec := json.NewDecoder(r.Body)
+		err = dec.Decode(target)
+		if err != nil {
+			utils.Ok(fmt.Errorf(err.Error()+". Body: %+v", r.Body))
+			return
+		}
 		if len(target.MetricName) == 0 {
 			return errors.New("empty metricName")
 		}
@@ -53,7 +108,7 @@ func (env *Env) createEventHttp() http.HandlerFunc {
 		response := &Resp{}
 		defer response.Render(w)
 
-		req := &request{}
+		req := &eventRequest{}
 		err := mapRequestToStruct(r, req)
 
 		if err != nil {
@@ -86,7 +141,7 @@ func (env *Env) getEventsHttp() http.HandlerFunc {
 		response := &Resp{}
 		defer response.Render(w)
 
-		// see request validation in env.ExportEventRoutes
+		// see eventRequest validation in env.ExportEventRoutes
 		params := mux.Vars(r)
 
 		metricTimeFrom, err := time.Parse(timeLayout, params["metricTimeFrom"])

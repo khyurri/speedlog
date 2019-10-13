@@ -20,7 +20,7 @@ func TestLogin(t *testing.T) {
 
 	testRounds := []trUserLogin{
 		{
-			// empty request
+			// empty eventRequest
 			ExpCode: 400,
 		},
 		{

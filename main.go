@@ -3,16 +3,17 @@ package main
 import (
 	"errors"
 	"fmt"
+	"log"
+	"net/http"
+	"sync"
+	"time"
+
 	"github.com/alexflint/go-arg"
 	"github.com/gorilla/mux"
 	"github.com/khyurri/speedlog/engine"
 	"github.com/khyurri/speedlog/engine/mongo"
 	"github.com/khyurri/speedlog/plugins"
 	"github.com/khyurri/speedlog/utils"
-	"log"
-	"net/http"
-	"sync"
-	"time"
 )
 
 const defaultTimezone = "UTC-0"
@@ -51,7 +52,7 @@ func addProjectMode(cliParams *params, dbEngine mongo.DataStore) (err error) {
 func initLogger(verbose bool) {
 	log.SetFlags(log.LstdFlags | log.Lmicroseconds | log.Llongfile)
 	if verbose {
-		utils.Level = utils.LG_DEBUG
+		utils.Level = utils.LgDebug
 	}
 }
 
@@ -141,7 +142,8 @@ func main() {
 		err = addProjectMode(cliParams, dbEngine)
 		utils.Ok(err)
 	default:
-		utils.Ok(errors.New(fmt.Sprintf("unknown mode '%s'", cliParams.Mode)))
+		utils.Ok(fmt.Errorf("unknown mode '%s'", cliParams.Mode))
+
 	}
 
 }

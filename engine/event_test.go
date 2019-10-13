@@ -18,6 +18,19 @@ type trEventSave struct {
 	ExpCode    int     // Expected http code
 }
 
+type trBatchEventSave struct {
+	Id         int     `json:"id"`
+	MetricName string  `json:"metricName"`
+	DurationMs float64 `json:"durationMs"`
+	Project    string  `json:"project"`
+	ExpCode    int     // Expected http code
+}
+
+type trEventsSave struct {
+	Event   []trBatchEventSave
+	ExpCode int
+}
+
 type trEventGet struct {
 	MetricName     string
 	Project        string
@@ -64,10 +77,49 @@ func TestCreateEventHttp(t *testing.T) {
 	}
 }
 
+func TestCreateEventsHttp(t *testing.T) {
+	testRounds := []trEventsSave{{
+		Event: []trBatchEventSave{
+			{
+				Id:         1,
+				MetricName: "testMetric",
+				DurationMs: 0.1,
+				Project:    "testProject",
+				ExpCode:    200,
+			},
+			{
+				Id:         2,
+				MetricName: failMetricName,
+				DurationMs: 0.1,
+				Project:    "testProject",
+				ExpCode:    400,
+			},
+		},
+		ExpCode: 200,
+	}}
+
+	env := NewTestEnv(t, "*")
+	router := mux.NewRouter()
+	env.ExportEventRoutes(router)
+
+	for round, event := range testRounds {
+		jsonStr, err := json.Marshal(event.Event)
+		r, err := http.NewRequest("PUT", "/events/", bytes.NewBuffer(jsonStr))
+		ok(t, err)
+		r.Header.Set("Content-Type", "application/json")
+		w := httptest.NewRecorder()
+		router.ServeHTTP(w, r)
+		assert(t, event.ExpCode == w.Code, fmt.Sprintf("wrong code `%d` at round %d", w.Code, round))
+		debug(w.Body)
+
+	}
+
+}
+
 func TestGetEventsHttp(t *testing.T) {
 	testRounds := []trEventGet{
 		{
-			// Empty request
+			// Empty eventRequest
 			ExpCode: 404,
 		},
 		{
@@ -80,7 +132,7 @@ func TestGetEventsHttp(t *testing.T) {
 			GroupBy:        "minutes",
 		},
 		{
-			// valid request with authorization
+			// valid eventRequest with authorization
 			ExpCode:        200,
 			Login:          validLogin,
 			MetricName:     "metricName",

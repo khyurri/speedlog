@@ -44,7 +44,7 @@ func (env *Env) authenticateHttp() http.HandlerFunc {
 
 		if r.Body == nil {
 			_r, _ := json.Marshal(r)
-			utils.Ok(errors.New(fmt.Sprintf("request body is nil. Request: %s", _r)))
+			utils.Ok(errors.New(fmt.Sprintf("eventRequest body is nil. Request: %s", _r)))
 			response.Status = StatusErr
 			return
 		}
@@ -52,7 +52,7 @@ func (env *Env) authenticateHttp() http.HandlerFunc {
 		u := &request{}
 		err := decoder.Decode(&u)
 		if err != nil {
-			utils.Ok(errors.New(fmt.Sprintf("invalid login request: %+v", err)))
+			utils.Ok(errors.New(fmt.Sprintf("invalid login eventRequest: %+v", err)))
 			response.Status = StatusIntErr
 			return
 		}

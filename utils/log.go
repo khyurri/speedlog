@@ -7,11 +7,11 @@ import (
 )
 
 const (
-	LG_ERROR = iota // show only errors (default)
-	LG_DEBUG        // show debug messages
+	LgError = iota // show only errors (default)
+	LgDebug        // show debug messages
 )
 
-var Level = LG_ERROR
+var Level = LgDebug
 
 // Ok — checks err and prints message if err is not nil
 func Ok(err error) {
@@ -33,7 +33,7 @@ func Panic(err error) {
 
 // Debug prints debug message if flag --debug have been passed
 func Debug(msg interface{}) {
-	if Level == LG_DEBUG {
+	if Level == LgDebug {
 		log.Printf("[DEBUG] %+v\n", msg)
 	}
 }

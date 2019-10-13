@@ -49,6 +49,9 @@ func (env *Env) ExportEventRoutes(router *mux.Router) {
 	router.HandleFunc("/event/", env.createEventHttp()).
 		Methods("PUT", "POST", "OPTIONS")
 
+	router.HandleFunc("/events/", env.createEventsHttp()).
+		Methods("PUT", "POST", "OPTIONS")
+
 	private := router.PathPrefix("/private/").Subrouter()
 	private.HandleFunc("/events/", env.getEventsHttp()).
 		Methods("GET", "OPTIONS").
