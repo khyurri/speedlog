@@ -45,7 +45,7 @@ After launch, 2 services will be publicly available on the host:
 
 ### Connect perfume.js
 
-To connect `perfume.js` to` speedlog` add the following code to the `perfume` initialization
+To connect `perfume.js` to` speedlog`, add the following code to the `perfume` initialization.
 
 ```javascript
 var project = "myProject";
@@ -66,76 +66,76 @@ const perfume = new Perfume({
 
 > Do not forget to replace IP `127.0.0.1` with a real host
 
-Now you can open `graphite` in a browser at the address` http: //127.0.0.1:8013` and build something like this
+Now you can open `graphite` in a browser using the address` http: //127.0.0.1:8013` and build something like this:
 
 ![Graphite example](docs/images/graphite_example.png?raw=true "Graphite example")
 
 # `speedlog` versions and Installation
 
-Prior to version 1.0.0, I am actively developing `speedlog`, which means:
+Prior to version 1.0.0, I am actively developing `speedlog` which means:
  
 - API may change without maintaining backward compatibility
-- documentation may not be true
-- the new version may break something that worked before
+- Documentation may not be true
+- The new version may break something that worked before
 
-The latest version is always available on [dockerhub](https://hub.docker.com/r/khyurri/speedlog).
+The latest version is always available at [dockerhub](https://hub.docker.com/r/khyurri/speedlog).
 `Docker` — my recommended way to install `speedlog`.
 
 # CLI
 
 ## Modes
-The first parameter to cli must be the mode of the `speedlog`. If mode is not passed,
+The first parameter to CLI must be the mode of the `speedlog`. If mode is not passed,
 then `speedlog` starts in default mode:` runserver`
 
 Available modes
 
 |Mode      |Description            |
 |----------|-----------------------|
-|runserver |starts the server      |
-|adduser   |adds user              |
-|addproject|adds project           |
-|delete    |deletes user or project|
+|runserver |Starts the server      |
+|adduser   |Adds user              |
+|addproject|Adds project           |
+|delete    |Deletes user or project|
 
 
 ### Examples
 
 
-Starting the server and creating the `myProject` project (if not created)
+**Starting the server and creating the `myProject` project (If not created):**
 
 ```bash
 speedlog --jwtkey=*** --mongo=mongo:27017 --project=myProject"
 ```
 
 
-User Creation
+**User Creation:**
 
 ```bash
 speedlog adduser --login=admin --password="-?sEcrE7-"
 ```
 
 
-Starting the server with exporting data to `graphite`
+**Starting the server with exporting data to `graphite`:**
 
 ```bash
 speedlog --jwtkey=*** --mongo=mongo:27017 --graphite=graphite:2003
 ```
 
 
-Project creation
+**Project creation:**
 
 ```bash
 speedlog addproject --project=myproject
 ```
 
 
-Delete project
+**Delete project:**
 
 ```bash
 speedlog delete --project=myproject
 ```
 
 
-Delete user
+**Delete user:**
 
 ```bash
 speedlog delete --login=admin
